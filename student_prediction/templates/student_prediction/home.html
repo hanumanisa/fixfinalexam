@@ -1,0 +1,262 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Analisis Data Siswa{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'student_prediction/css/style.css' %}">
+    
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'student_prediction:home' %}">
+                <img src="{% static 'student_prediction/images/logo.png' %}" alt="Logo President University" class="navbar-logo"> President University
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'student_prediction:home' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'student_prediction:about' %}">About</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Dashboards
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="{% url 'student_prediction:alfira_predictdashboard' %}">Instructor</a></li>
+                            <li><a class="dropdown-item" href="{% url 'student_prediction:hanum_predictdashboard' %}">Course</a></li>
+                            <li><a class="dropdown-item" href="{% url 'student_prediction:najla_predictdashboard' %}">Student</a></li>
+                            <li><a class="dropdown-item" href="{% url 'student_prediction:safira_predictdashboard' %}">Semester</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'admin:index' %}">Admin</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container my-5">
+        {% block content %}
+        <!-- Default home page content -->
+        <h1>Analyze Student Data for Improved Academic Experience and Success</h1>
+
+        <div class="row justify-content-center g-4 mt-4">
+            <!-- Dashboard Cards as Circular Elements -->
+            <div class="col-6 col-md-3">
+                <div class="dashboard-container">
+                    <a href="{% url 'student_prediction:alfira_predictdashboard' %}" class="dashboard-card d-block text-decoration-none">
+                        <div class="img-container">
+                            <img src="{% static 'student_prediction/images/lectureralfira.png' %}" alt="Dashboard Alfira" class="img-fluid dashboard-img">
+                        </div>
+                        <p class="dashboard-text">Instructor Performance</p>
+                    </a>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="dashboard-container">
+                    <a href="{% url 'student_prediction:hanum_predictdashboard' %}" class="dashboard-card d-block text-decoration-none">
+                        <div class="img-container">
+                            <img src="{% static 'student_prediction/images/courseshanum.png' %}" alt="Dashboard Hanum" class="img-fluid dashboard-img">
+                        </div>
+                        <p class="dashboard-text">Course Recommendations</p>
+                    </a>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="dashboard-container">
+                    <a href="{% url 'student_prediction:najla_predictdashboard' %}" class="dashboard-card d-block text-decoration-none">
+                        <div class="img-container">
+                            <img src="{% static 'student_prediction/images/studentnala.png' %}" alt="Dashboard Najla" class="img-fluid dashboard-img">
+                        </div>
+                        <p class="dashboard-text">Student Learning Style</p>
+                    </a>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="dashboard-container">
+                    <a href="{% url 'student_prediction:safira_predictdashboard' %}" class="dashboard-card d-block text-decoration-none">
+                        <div class="img-container">
+                            <img src="{% static 'student_prediction/images/semestersafira.png' %}" alt="Dashboard Safira" class="img-fluid dashboard-img">
+                        </div>
+                        <p class="dashboard-text">Semester Recommendations</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+
+       <div class="row mt-5">
+            <!-- Objective Card -->
+            <div class="col-md-4 mb-4">
+                <div class="info-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-bullseye"></i> Objective</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>
+                            Student Data Analytics for Improving Academic Experience and Success. This project aims to assist lecturers and academic institutions in improving students' learning experience and academic success through analyzing historical lecture data. By utilizing data science methods, this project consists of four main use cases that are interrelated.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Target Card -->
+            <div class="col-md-4 mb-4">
+                <div class="info-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-users"></i> User Target</h2>
+                    </div>
+                    <div class="card-body">
+                        <ul class="user-list">
+                            <li><i class="fas fa-chalkboard-teacher"></i> Lecturers</li>
+                            <li><i class="fas fa-sitemap"></i> Academic Administration</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Facts Card -->
+            <div class="col-md-4 mb-4">
+                <div class="info-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-chart-line"></i> Quick Facts</h2>
+                    </div>
+                    <div class="card-body">
+                        <ul class="fact-list">
+                            <li><span class="fact-number">4</span> Use Cases</li>
+                            <li><span class="fact-number">3+</span> Data Science Methods</li>
+                            <li><span class="fact-number">2025</span> Project Year</li>
+                            <li><span class="fact-number">100%</span> Data-Driven</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Use Cases Section -->
+        <h2 class="text-center mt-4 mb-4"><i class="fas fa-puzzle-piece"></i> Use Cases</h2>
+        <div class="row">
+            <!-- Use Case 1 -->
+            <div class="col-md-6 mb-4">
+                <div class="use-case-card">
+                    <div class="use-case-header">
+                        <h3>1. Semester Recommendations for Courses</h3>
+                    </div>
+                    <div class="use-case-body">
+                        <p>
+                            This project aims to recommend the most suitable semester to take a specific course based on historical academic data. By analyzing patterns from previous student performances, the system can:
+                        </p>
+                        <ul>
+                            <li>Predict expected grades for each available semester</li>
+                            <li>Help students plan their academic journey strategically</li>
+                            <li>Improve overall academic performance by suggesting optimal timing</li>
+                        </ul>
+                        <p>
+                            With this system, institutions can be faster in taking action that suits the needs of each student, not only based on final grades, but also based on learning patterns and their activeness in class.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Use Case 2 -->
+            <div class="col-md-6 mb-4">
+                <div class="use-case-card">
+                    <div class="use-case-header">
+                        <h3>2. Course Difficulty & Enrollment Analysis</h3>
+                    </div>
+                    <div class="use-case-body">
+                        <p>
+                            This project aims to predict the difficulty levels of courses within the same semester by analyzing historical enrollment data, student grades, and course difficulty indicators. Through this system, academic planners can:
+                        </p>
+                        <ul>
+                            <li>Predict the relative difficulty level of each course</li>
+                            <li>Recommend optimal course combinations within a semester</li>
+                            <li>Assist students in making informed enrollment decisions</li>
+                            <li>Provide data-driven insights for curriculum teams</li>
+                        </ul>
+                        <p>
+                            By considering not only grades but also enrollment patterns and course difficulty history, institutions can create academic plans that better support student achievement.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Use Case 3 -->
+            <div class="col-md-6 mb-4">
+                <div class="use-case-card">
+                    <div class="use-case-header">
+                        <h3>3. Instructor Performance Clustering</h3>
+                    </div>
+                    <div class="use-case-body">
+                        <p>
+                            This project aims to group instructors based on student grade, attendance percentage, semester, total students, and difficulty level of the course. By doing so, we can:
+                        </p>
+                        <ul>
+                            <li>Identify high-performing instructors</li>
+                            <li>Detect teaching patterns affecting student outcomes</li>
+                            <li>Provide insights for evaluation and improvement</li>
+                        </ul>
+                        <p>
+                            The clustering is done using unsupervised learning to reveal natural groupings without predefined labels.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Use Case 4 -->
+            <div class="col-md-6 mb-4">
+                <div class="use-case-card">
+                    <div class="use-case-header">
+                        <h3>4. Student Learning Style</h3>
+                    </div>
+                    <div class="use-case-body">
+                        <p>
+                            The purpose of this modeling is to predict a student's learning style based on two main data points: average score and attendance percentage. By knowing the prediction of student learning styles, we can:
+                        </p>
+                        <ul>
+                            <li>Identify students who excel and are diligent</li>
+                            <li>Find students who are smart but rarely attend</li>
+                            <li>Recognize students who are diligent but have low grades</li>
+                            <li>Identify students who have problems with both attendance and achievement</li>
+                        </ul>
+                        <p>
+                            With this system, institutions can take action that suits the needs of each student, based on learning patterns and classroom activeness.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer no-print">
+        <div class="container text-center">
+            <p>&copy; 2025 President University</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

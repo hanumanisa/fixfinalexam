@@ -1,0 +1,319 @@
+/* GLOBAL STYLES */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #F0F2BD; /* Warna background yang lebih terang */
+    margin: 0;
+    padding: 0;
+    color: #333;
+    display: flex; /* Untuk menempatkan footer di bawah */
+    flex-direction: column; /* Untuk menempatkan footer di bawah */
+    min-height: 100vh; /* Agar footer selalu di bagian bawah halaman */
+}
+
+main {
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+    flex-grow: 1; /* Agar main mengisi ruang kosong */
+}
+
+h1, h2, h3 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+p {
+    line-height: 1.6;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+/* NAVBAR SPECIFIC STYLES */
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    font-weight: bold; /* Memberi penekanan pada teks brand */
+    color: #fff !important; /* Memastikan warna teks brand putih */
+}
+
+.navbar-logo {
+    height: 40px; /* Ukuran logo yang sedikit lebih besar */
+    margin-right: 10px;
+    display: block; /* Pastikan logo muncul */
+}
+
+/* Dropdown Navbar Style */
+.navbar-nav .nav-item.dropdown .dropdown-menu {
+    background-color: #343a40; /* Warna background dropdown sama dengan navbar */
+    border: none; /* Menghilangkan border dropdown */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-nav .nav-item.dropdown .dropdown-item {
+    color: #fff; /* Warna teks item dropdown putih */
+    transition: background-color 0.2s ease;
+}
+
+.navbar-nav .nav-item.dropdown .dropdown-item:hover {
+    background-color: #495057; /* Warna hover untuk item dropdown */
+    color: #fff;
+}
+
+.navbar-nav .nav-item.dropdown .dropdown-divider {
+    border-top: 1px solid #6c757d; /* Warna garis pemisah */
+}
+
+/* DASHBOARD STYLES */
+.dashboard-container {
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.dashboard-card {
+    background-color: #ffffff;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.dashboard-text {
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    z-index: 1; /* Pastikan teks di atas gambar */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    padding: 0 5px;
+}
+
+/* IMAGE CONTAINER & IMAGE STYLES */
+.img-container {
+    width: 70%; /* Disesuaikan ke satu nilai */
+    padding-top: 70%; /* Disesuaikan ke satu nilai */
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #3498db;
+    margin: 0 auto 10px;
+    max-width: 150px; /* Disesuaikan ke satu nilai */
+    max-height: 150px; /* Disesuaikan ke satu nilai */
+}
+
+.dashboard-img {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+}
+
+.img-container:hover {
+    border-color: #2980b9; /* Warna border berubah saat hover */
+}
+
+/* PROJECT INFO */
+.project-info {
+    max-width: 1000px;
+    margin: 50px auto 0 auto;
+    background-color: #ffffff;
+    color: #000000;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    text-align: center;
+}
+
+.project-info h2 {
+    color: #084f58;
+    margin-bottom: 15px;
+}
+
+.project-info p {
+    font-size: 1.1em;
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+
+/* FOOTER */
+.footer {
+    background-color: #343a40;
+    color: #fff;
+    width: 100%;
+    /* margin-top: auto; */ /* Membuat footer selalu di bagian bawah */
+}
+
+/* GENERAL CARD STYLING */
+.info-card, .use-case-card {
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+    overflow: hidden;
+}
+
+.info-card:hover, .use-case-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* CARD HEADER STYLING */
+.card-header, .use-case-header {
+    background-color: #4B352A;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 15px 15px 0 0;
+    text-align: center;
+}
+
+.card-header h2, .use-case-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: white;
+}
+
+/* CARD BODY STYLING */
+.card-body, .use-case-body {
+    padding: 20px; /* Disesuaikan ke satu nilai */
+}
+
+.card-body p, .use-case-body p {
+    color: #555;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.use-case-body ul, .user-list, .fact-list {
+    padding-left: 20px;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.use-case-body li, .user-list li, .fact-list li {
+    margin-bottom: 8px;
+    color: #555;
+    list-style-type: none;
+    position: relative;
+    padding-left: 25px;
+}
+
+.use-case-body li:before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #4B352A;
+    font-weight: bold;
+}
+
+/* USER LIST STYLING */
+.user-list li {
+    padding: 10px 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.user-list li:last-child {
+    border-bottom: none;
+}
+
+.user-list li i {
+    margin-right: 10px;
+    color: #4B352A;
+}
+
+/* FACT LIST STYLING */
+.fact-list li {
+    font-size: 1.1em;
+    padding: 10px 5px;
+}
+
+.fact-number {
+    font-weight: bold;
+    color: #4B352A;
+    margin-right: 5px;
+    font-size: 1.3em;
+}
+
+/* RESPONSIVE ADJUSTMENTS */
+@media (max-width: 768px) {
+    .card-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .use-case-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .fact-number {
+        font-size: 1.2em;
+    }
+
+    .card-body, .use-case-body {
+        padding: 15px;
+    }
+
+    /* Dashboard cards specific adjustments for mobile */
+    .dashboard-container {
+        padding: 5px;
+    }
+
+    .img-container {
+        width: 60px;
+        height: 60px;
+        padding-top: 0; /* Menghapus padding-top untuk elemen inline-block */
+        display: inline-block;
+        margin-right: 10px;
+        margin-bottom: 0;
+        max-width: 60px; /* Batasi max-width juga */
+        max-height: 60px; /* Batasi max-height juga */
+    }
+
+    .dashboard-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: left;
+        padding: 10px;
+        border-radius: 15px;
+        background-color: #ffffff;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .dashboard-text {
+        margin-top: 0;
+        margin-left: 10px;
+        /* Hapus properti text-overflow dll. jika tidak diperlukan dalam tata letak baris */
+        white-space: normal; /* Biarkan teks membungkus */
+        overflow: visible;
+        text-overflow: clip;
+        max-width: none;
+    }
+
+    .project-info {
+        max-width: 100%;
+        padding: 15px;
+    }
+}

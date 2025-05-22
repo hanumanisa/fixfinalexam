@@ -21,6 +21,13 @@ class Student(models.Model):
     def __str__(self):
         return self.name
 
+class Semester(models.Model):
+    semester_id = models.AutoField(primary_key=True)
+    semester_name = models.CharField(max_length=20)
+
+    class Meta:
+        db_table = 'semester'
+        managed = False
 
 class Course(models.Model):
     course_id = models.IntegerField(primary_key=True)
@@ -48,6 +55,9 @@ class Enrollment(models.Model):
     enroll_id = models.AutoField(primary_key=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, db_column='course_id', null=True, blank=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, db_column='stu_id', null=True, blank=True)
+    semester = models.ForeignKey(Semester, on_delete=models.DO_NOTHING, db_column='semester_id')
+    grade = models.FloatField()
+
 
     class Meta:
         db_table = 'enrollment'
@@ -90,6 +100,26 @@ class CourseRecommendation(models.Model):
         db_table = 'course_recommendation'
         managed = True 
 
+class Instructor(models.Model):
+    instructor_id = models.AutoField(primary_key=True)
+    instructor_name = models.CharField(max_length=100)
+    dept_id = models.IntegerField()
+
+    class Meta:
+        db_table = 'instructor'
+        managed = False
+
+
+class CourseInstructor(models.Model):
+    course_instructor_id = models.AutoField(primary_key=True)
+    course = models.ForeignKey(Course, on_delete=models.DO_NOTHING, db_column='course_id')
+    instructor = models.ForeignKey(Instructor, on_delete=models.DO_NOTHING, db_column='instructor_id')
+    semester = models.ForeignKey(Semester, on_delete=models.DO_NOTHING, db_column='semester_id')
+
+    class Meta:
+        db_table = 'course_instructor'
+        managed = False
+
 class ModelInfo(models.Model):    
     model_name = models.CharField(max_length=255)
     model_encorlabel = models.CharField(max_length=255, default='LabelEncoder')
@@ -104,3 +134,19 @@ class ModelInfo(models.Model):
 
     def __str__(self):    
         return self.model_name
+    
+
+class alfira_ModelInfo(models.Model):
+    model_name = models.CharField(max_length=100)
+    model_file = models.CharField(max_length=255)
+    training_data = models.CharField(max_length=255)
+    training_date = models.DateTimeField()
+    model_summary = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'AlfiraModelInfo'
+        managed = True
+
+    def __str__(self):
+        return f"{self.model_name} trained on {self.training_date.strftime('%Y-%m-%d %H:%M:%S')}"
+    

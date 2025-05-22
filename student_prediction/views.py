@@ -15,6 +15,12 @@ import joblib
 import numpy as np
 from django.conf import settings
 
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.conf import settings
+from .forms import InstructorPerformanceForm
+
+
 def home(request):
     return render(request, 'student_prediction/home.html')  
 
@@ -23,6 +29,215 @@ def about(request):
 
 def alfira_predictdashboard(request):  
     return render(request, 'student_prediction/alfira_predictdashboard.html') 
+
+
+def instructor_clusters_api(request):
+    df = pd.read_csv('all_courses_clustered.csv')  
+
+    cluster_counts = df['cluster'].value_counts().to_dict()
+
+    def get_cluster_points(cluster_num):
+        cluster_df = df[df['cluster'] == cluster_num]
+        return [{
+            'x': row['avg_grade'],
+            'y': row['avg_attendance'],
+            'instructor': row['instructor_name'],
+            'semester': row['semester_name'],
+            'total_student': row['student_count'],
+            'difficulty': row['difficulty_level'],
+        } for _, row in cluster_df.iterrows()]
+
+    response_data = {
+        'cluster_0_count': cluster_counts.get(0, 0),
+        'cluster_1_count': cluster_counts.get(1, 0),
+        'cluster_2_count': cluster_counts.get(2, 0),
+        'cluster_0_points': get_cluster_points(0),
+        'cluster_1_points': get_cluster_points(1),
+        'cluster_2_points': get_cluster_points(2),
+    }
+    return JsonResponse(response_data)
+
+
+
+
+def load_kmeans_model():
+    model_path = os.path.join(settings.BASE_DIR, 'kmeans_model.pkl')
+    if not os.path.exists(model_path):
+        print("Model file does not exist")
+        return None
+    try:
+        model = joblib.load(model_path)
+        print(f"KMeans model loaded: {model}")
+        return model
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        return None
+
+
+
+def predict_cluster(request):
+    if request.method == 'POST':
+        form = InstructorPerformanceForm(request.POST)
+        if form.is_valid():
+            print("Cleaned data:", form.cleaned_data)
+            try:
+                # Get form data
+                avg_grade = form.cleaned_data['avg_grade']
+                avg_attendance = form.cleaned_data['avg_attendance']
+                student_count = form.cleaned_data['total_student']
+        
+                semester_obj = form.cleaned_data['semester']
+                semester_str = semester_obj.semester_name
+
+                difficulty_str = form.cleaned_data['difficulty_level']
+
+                print("Semester name:", semester_str)
+                print("Difficulty level:", difficulty_str)
+
+                difficulty_mapping = {
+                    "Easy": 0,
+                    "Medium": 1,
+                    "Hard": 2
+                }
+
+                semester_mapping = {
+                    "Semester 1": 0,
+                    "Semester 2": 1,
+                    "Semester 3": 2
+                }
+
+                difficulty = difficulty_mapping.get(difficulty_str, -1)
+                semester = semester_mapping.get(semester_str, -1)
+
+                if difficulty == -1 or semester == -1:
+                    return JsonResponse({
+                        'error': 'Invalid difficulty level or semester value',
+                        'difficulty_str': difficulty_str,
+                        'semester_str': semester_str,
+                        'difficulty': difficulty,
+                        'semester': semester
+                    }, status=400)
+            
+                input_data = [[
+                    avg_grade,
+                    avg_attendance,
+                    float(semester),
+                    student_count,
+                    float(difficulty)  
+                ]]
+                print(f"Input data: {input_data}")
+                
+                try:
+                    print("Trying to load KMeans model...")
+                    kmeans = load_kmeans_model()  # <-- Ini model, bukan path
+                    if kmeans is None:
+                        print("Model loading failed!")
+                    else:
+                        print(f"Model n_features_in_: {kmeans.n_features_in_}")
+
+                    feature_names = ['avg_grade', 'avg_attendance', 'semester_enc', 'student_count', 'difficulty_enc']
+                    # Ubah input_data list jadi DataFrame dengan kolom yang benar
+                    input_df = pd.DataFrame(input_data, columns=feature_names)
+                    # Lalu prediksi pakai DataFrame
+                    cluster = kmeans.predict(input_df)[0]
+                    print(f"Predicted cluster: {cluster}")
+
+                    prediction = kmeans.predict(input_df)
+                    print(f"Raw prediction output: {prediction}")
+                    cluster = prediction[0]
+                   
+                    cluster_descriptions = {
+                        0: "Cluster A",
+                        1: "Cluster B",
+                        2: "Cluster C",
+                    }
+                    description = cluster_descriptions.get(cluster, "Unknown cluster")
+                    return JsonResponse({
+                        'cluster': int(cluster),
+                        'description': description,
+                        'message': 'Prediction successful'
+                    })
+                
+                except Exception as e:
+                    print(f"Error loading model: {e}")
+                    return JsonResponse({'error': f'Error loading model: {e}'}, status=500)
+            except Exception as e:
+                return JsonResponse({
+                    'error': f'Unexpected error: {str(e)}'
+                }, status=500)
+        else:
+            print("Form errors:", form.errors)
+            return JsonResponse({
+                'error': 'Invalid form data',
+                'form_errors': form.errors
+        }, status=400)            
+
+    else:
+        form = InstructorPerformanceForm()
+
+    context = {
+        'form': form,
+        # Include other context data you need for the visualization
+    }
+    return render(request, 'student_prediction/alfira_predictdashboard.html', context)
+
+
+
+
+def cluster_visualization(request):
+    df = pd.read_csv('all_courses_clustered.csv')
+
+    # Your existing data preparation code...
+    cluster_data = df.to_dict('records')
+    cluster_counts = df['cluster'].value_counts().to_dict()
+    cluster_avgs = df.groupby('cluster').agg({
+        'avg_grade': 'mean',
+        'avg_attendance': 'mean',
+        'student_count': 'mean',
+        'semester_enc': 'mean',
+        'difficulty_enc': 'mean'  
+    }).to_dict('index')
+
+    def get_cluster_points(cluster_num):
+        cluster_df = df[df['cluster'] == cluster_num]
+        return [{
+            'x': row['avg_grade'],
+            'y': row['avg_attendance'],
+            'instructor': row['instructor_name'],
+            'total_student': row['student_count'],
+            'semester': row['semester_name'],
+            'difficulty': row['difficulty_level']
+        } for _, row in cluster_df.iterrows()]
+
+    form = InstructorPerformanceForm()
+    
+    context = {
+        'form': form,
+        'cluster_data': cluster_data,
+        'cluster_0_count': cluster_counts.get(0, 0),
+        'cluster_1_count': cluster_counts.get(1, 0),
+        'cluster_2_count': cluster_counts.get(2, 0),
+        'cluster_0_avg': cluster_avgs.get(0, {'avg_grade': 0, 'avg_attendance': 0, 'student_count': 0}),
+        'cluster_1_avg': cluster_avgs.get(1, {'avg_grade': 0, 'avg_attendance': 0, 'student_count': 0}),
+        'cluster_2_avg': cluster_avgs.get(2, {'avg_grade': 0, 'avg_attendance': 0, 'student_count': 0}),
+        'cluster_0_points': json.dumps(get_cluster_points(0)),
+        'cluster_1_points': json.dumps(get_cluster_points(1)),
+        'cluster_2_points': json.dumps(get_cluster_points(2)),
+    }
+
+    return render(request, 'student_prediction/alfira_predictdashboard.html', context)
+
+
+
+
+
+
+
+
+
+
+
+
 
 def najla_predictdashboard(request):  
     return render(request, 'student_prediction/najla_predictdashboard.html') 
@@ -190,6 +405,10 @@ def create_visualization(rule_data, course1, course2):
     plt.close()
     
     return img_data
+
+
+
+
 
 
 

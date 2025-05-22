@@ -15,4 +15,7 @@ urlpatterns = [
     path('hanum_predictdashboard/', views.hanum_predictdashboard, name='hanum_predictdashboard'),
     path('get-courses/', views.get_courses, name='get_courses'),
     path('analyze/', views.analyze, name='hanum_analysis'),  
+    path('cluster-alfira/', views.cluster_visualization, name='al_cluster'),
+    path('api/instructor_clusters/', views.instructor_clusters_api, name='instructor_clusters_api'),
+    path('predict-cluster/', views.predict_cluster, name='predict_cluster'),
 ]

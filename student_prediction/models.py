@@ -149,4 +149,17 @@ class alfira_ModelInfo(models.Model):
 
     def __str__(self):
         return f"{self.model_name} trained on {self.training_date.strftime('%Y-%m-%d %H:%M:%S')}"
+
+class ModelHanum(models.Model):    
+    model_name = models.CharField(max_length=255)    
+    model_file = models.CharField(max_length=255)    
+    training_data = models.CharField(max_length=255, default='course_example_new.csv')    
+    training_date = models.DateTimeField()    
+    model_summary = models.TextField()    
     
+    class Meta:    
+        db_table = 'modelhanum'    
+        managed = True    
+    
+    def __str__(self):    
+        return self.model_name  

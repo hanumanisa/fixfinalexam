@@ -2,36 +2,24 @@ import pandas as pd
 from mlxtend.frequent_patterns import apriori, association_rules
 import os
 
-def ml_hanum_value(assessment_csv='course_example_new.csv', output_csv='course_apriori_rules.csv'):
-
-    # Check if input file exists
+def ml_hanum_values(assessment_csv='course_example_new.csv', output_csv='course_apriori_rules.csv'):
     if not os.path.exists(assessment_csv):
         raise FileNotFoundError(f"Assessment data file '{assessment_csv}' not found")
-    
-    # Load data dari CSV hasil ETL
+
     df = pd.read_csv(assessment_csv)
-    
-    # Buat basket matrix: student vs course (1 kalau ada, 0 kalau tidak)
+
     basket = (df.groupby(['stu_id', 'course_name'])['assessment_id']
               .count().unstack().reset_index().fillna(0)
               .set_index('stu_id'))
-    
-    # Ubah ke binary 1/0
-    def encode_units(x):
-        return 1 if x >= 1 else 0
-    
-    basket = basket.applymap(encode_units)
-    
-    # Generate frequent itemsets
+
+    basket = basket.applymap(lambda x: 1 if x >= 1 else 0)
+
     frequent_itemsets = apriori(basket, min_support=0.05, use_colnames=True)
-    
-    # Generate association rules
     rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.3)
-    
-    # Simpan rules ke CSV
+
     rules.to_csv(output_csv, index=False)
-    
-    return rules
+
+    return rules 
 
 def analyze_courses(department, course1, course2, assessment_data, rules_data):
 
@@ -114,10 +102,10 @@ def find_association_rule(rules_df, course1, course2):
 def generate_recommendation(rule_data, course1, course2, course1_difficulty, course2_difficulty):
  
     if 'hard' in [d.lower() for d in course1_difficulty] and 'hard' in [d.lower() for d in course2_difficulty]:
-        return f"{course1} dan {course2} Not Recommended to be taken together in one semester as both have a high level of difficulty."
+        return f"{course1} dan {course2} Not Recommended to be taken together in the same semester as both have a high level of difficulty."
     
     if rule_data is None or rule_data.empty:
-        return f"{course1} dan {course2} does not have a significan relationship based on historical data."
+        return f"{course1} dan {course2} Does not have a significant relationship based on historical data."
         
     confidence = rule_data['confidence'].values[0]
     lift = rule_data['lift'].values[0]
@@ -126,10 +114,10 @@ def generate_recommendation(rule_data, course1, course2, course1_difficulty, cou
         if confidence > 0.5:
             return f"{course1} dan {course2} Recommended to be taken together in the same semester."
         else:
-            return f"{course1} dan {course2} Can be taken together in the same semester, but not significantly."
+            return f"{course1} dan {course2} Can be taken together in the same semester, but not significantly"
     else:
-        return f"{course1} dan {course2} Not Recommended taken together in the same semester."
+        return f"{course1} dan {course2} Not Recommended to be taken together in the same semester."
 
 
 if __name__ == "__main__":
-    ml_hanum_value()
+    ml_hanum_values()

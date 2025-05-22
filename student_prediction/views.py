@@ -20,6 +20,13 @@ from django.http import JsonResponse
 from django.conf import settings
 from .forms import InstructorPerformanceForm
 
+from django.db import connection
+from .forms import CourseRecommendationForm
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder
+from django.db import reset_queries
+from .models import Course, Semester, Enrollment, Attendance, CourseDifficulty, ModelInfo
+
 
 def home(request):
     return render(request, 'student_prediction/home.html')  
@@ -283,9 +290,6 @@ def predict_learnstyle(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-def safira_predictdashboard(request):  
-    return render(request, 'student_prediction/safira_predictdashboard.html') 
-
 def analysis(request):
     return render(request, 'student_prediction/hanum_analysis.html')
 
@@ -406,9 +410,159 @@ def create_visualization(rule_data, course1, course2):
     
     return img_data
 
+#SAFIRA
 
+def safira_predictdashboard(request):
+    # Initialize fresh connection
+    reset_queries()
+    connection.close()
+    connection.ensure_connection()
+    
+    if request.method == 'POST':
+        form = CourseRecommendationForm(request.POST)
+        if form.is_valid():
+            try:
+                course = form.cleaned_data['course']
+                next_year = form.cleaned_data['next_academic_year']
+                
+                # Get course difficulty
+                try:
+                    course_diff = CourseDifficulty.objects.get(course=course)
+                    difficulty_level = course_diff.difficulty_level
+                except CourseDifficulty.DoesNotExist:
+                    return render(request, 'student_prediction/safira_predictdashboard.html', {
+                        'form': CourseRecommendationForm(),
+                        'error': 'Course difficulty data not available'
+                    })
 
+                # Get enrollments with attendance data
+                enrollments = Enrollment.objects.filter(course=course, grade__isnull=False)\
+                    .select_related('semester', 'course__department')\
+                    .prefetch_related('attendance_set')
 
-
-
-
+                if not enrollments.exists():
+                    return render(request, 'student_prediction/safira_predictdashboard.html', {
+                        'form': CourseRecommendationForm(),
+                        'error': 'No valid enrollment data with attendance available'
+                    })
+                
+                # Prepare data
+                data = []
+                le = LabelEncoder()
+                
+                for enroll in enrollments:
+                    # Get first attendance record
+                    attendance = enroll.attendance_set.first()
+                    if attendance:
+                        data.append({
+                            'course_id': course.course_id,
+                            'semester_id': enroll.semester.semester_id,
+                            'grade': float(enroll.grade),
+                            'attendance': float(attendance.attendance_percentage),
+                            'difficulty': difficulty_level
+                        })
+                
+                if len(data) < 3:
+                    return render(request, 'student_prediction/safira_predictdashboard.html', {
+                        'form': CourseRecommendationForm(),
+                        'error': 'Need at least 3 records for prediction'
+                    })
+                
+                # Process data
+                try:
+                    df = pd.DataFrame(data)
+                    df['difficulty_encoded'] = le.fit_transform(df['difficulty'])
+                    
+                    # Calculate averages
+                    course_semester_avg = df.groupby(['course_id', 'semester_id']).agg({
+                        'grade': 'mean',
+                        'attendance': 'mean',
+                        'difficulty_encoded': 'first'
+                    }).reset_index()
+                    
+                    student_count = df.groupby(['course_id', 'semester_id']).size().reset_index(name='student_count')
+                    course_semester_avg = course_semester_avg.merge(student_count, on=['course_id', 'semester_id'])
+                except Exception as e:
+                    return render(request, 'student_prediction/safira_predictdashboard.html', {
+                        'form': CourseRecommendationForm(),
+                        'error': f'Data processing failed: {str(e)}'
+                    })
+                
+                # Train model
+                try:
+                    X = course_semester_avg[['course_id', 'semester_id', 'difficulty_encoded', 'student_count']]
+                    y = course_semester_avg['grade']
+                    
+                    model = RandomForestRegressor(
+                        n_estimators=100,
+                        random_state=42,
+                        max_depth=5,
+                        min_samples_split=3
+                    )
+                    model.fit(X, y)
+                except Exception as e:
+                    return render(request, 'student_prediction/safira_predictdashboard.html', {
+                        'form': CourseRecommendationForm(),
+                        'error': f'Model training failed: {str(e)}'
+                    })
+                
+                # Make predictions
+                predictions = []
+                semesters = Semester.objects.all().only('semester_id', 'semester_name')
+                
+                for semester in semesters:
+                    try:
+                        features = np.array([[
+                            course.course_id,
+                            semester.semester_id,
+                            le.transform([difficulty_level])[0],
+                            course_semester_avg['student_count'].mean()
+                        ]])
+                        
+                        pred_grade = model.predict(features)[0]
+                        predictions.append({
+                            'semester': semester,
+                            'predicted_grade': round(float(pred_grade), 1)
+                        })
+                    except Exception as e:
+                        continue
+                
+                if not predictions:
+                    return render(request, 'student_prediction/safira_predictdashboard.html', {
+                        'form': CourseRecommendationForm(),
+                        'error': 'Failed to generate predictions'
+                    })
+                
+                # Get best semester
+                best_semester = max(predictions, key=lambda x: x['predicted_grade'])
+                
+                # Create model directory if not exists
+                model_dir = os.path.join(settings.MEDIA_ROOT, 'ml_models')
+                os.makedirs(model_dir, exist_ok=True)
+                
+                # Save model and create ModelInfo
+                return render(request, 'student_prediction/safira_predictdashboard.html', {
+                    'form': CourseRecommendationForm(),
+                    'result': {
+                        'course': course,
+                        'next_year': next_year,
+                        'best_semester': best_semester['semester'],
+                        'predicted_grade': best_semester['predicted_grade'],
+                        'all_predictions': sorted(predictions, key=lambda x: x['predicted_grade'], reverse=True),
+                        'model_saved': True if 'model_info' in locals() else False
+                    }
+                })
+            
+            except Exception as e:
+                connection.close()
+                return render(request, 'student_prediction/safira_predictdashboard.html', {
+                    'form': CourseRecommendationForm(),
+                    'error': f'System error: {str(e)}'
+                })
+    
+    # GET request
+    form = CourseRecommendationForm()
+    return render(request, 'student_prediction/safira_predictdashboard.html', {
+        'form': form,
+        'error': None
+    }) 

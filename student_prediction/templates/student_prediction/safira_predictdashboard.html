@@ -1,0 +1,108 @@
+{% extends 'student_prediction/home.html' %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #fffde7; /* Kuning muda */
+    }
+    .btn-primary {
+        background-color: #ffc107; /* Kuning lebih cerah */
+        border-color: #ffc107;
+        color: #000;
+    }
+    .btn-primary:hover {
+        background-color: #ffca28;
+        border-color: #ffca28;
+    }
+    .card {
+        border: 1px solid #ffc107;
+        box-shadow: 0 4px 8px rgba(255, 193, 7, 0.1);
+    }
+    .card-header {
+        background-color: #ffecb3; /* Kuning lebih muda */
+        border-bottom: 1px solid #ffc107;
+    }
+    .table thead th {
+        background-color: #ffecb3;
+    }
+    .table-success {
+        background-color: #fff8e1 !important;
+    }
+    .alert-success {
+        background-color: #f0f4c3; /* Hijau muda kekuningan */
+        border-color: #dce775;
+        color: #000;
+    }
+    .alert-danger {
+        background-color: #ffcdd2; /* Merah muda */
+        border-color: #ef9a9a;
+        color: #000;
+    }
+</style>
+
+<div class="container mt-5">
+    <h2 style="color: #5d4037;">Semester Recommendations for Courses System</h2>
+    
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    {{ form.course.label_tag }}
+                    <br>{% if form.course.errors %}
+                        <div class="alert alert-danger">{{ form.course.errors }}</div>
+                    {% endif %}
+                    {{ form.course }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    {{ form.next_academic_year.label_tag }}
+                    {{ form.next_academic_year }}
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Get Recommendation</button>
+    </form>
+
+    {% if error %}
+        <div class="alert alert-danger mt-4">{{ error }}</div>
+    {% endif %}
+
+    {% if result %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4 style="color: #5d4037;">Recommendation Result</h4>
+            </div>
+            <div class="card-body">
+                <h5 style="color: #5d4037;">For {{ result.course.course_name }}</h5>
+                <p>Academic Year: {{ result.next_year }}</p>
+                
+                <div class="alert alert-success mt-3">
+                    <strong>Recommended Semester:</strong> {{ result.best_semester.semester_name }}
+                    <br>
+                    <strong>Predicted Average Grade:</strong> {{ result.predicted_grade }}
+                </div>
+                
+                <h5 class="mt-4" style="color: #5d4037;">All Semester Predictions:</h5>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Semester</th>
+                            <th>Predicted Grade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pred in result.all_predictions %}
+                        <tr {% if pred.semester == result.best_semester %}class="table-success"{% endif %}>
+                            <td>{{ pred.semester.semester_name }}</td>
+                            <td>{{ pred.predicted_grade }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

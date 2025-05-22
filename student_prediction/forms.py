@@ -40,3 +40,22 @@ class InstructorPerformanceForm(forms.Form):
             ('Hard', 'Hard'),
         ]   
     )
+
+class CourseRecommendationForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['course'].queryset = Course.objects.all().select_related('department')
+    
+    course = forms.ModelChoiceField(
+        queryset=Course.objects.none(),
+        label="Select Course",
+        empty_label="-- Select Course --"
+    )
+    
+    next_academic_year = forms.CharField(
+        label="Next Academic Year",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. 2025/2026'
+        })
+    )

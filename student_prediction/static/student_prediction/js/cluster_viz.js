@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/instructor_clusters/')
         .then(response => response.json())
         .then(data => {
-            document.getElementById('statusBox').textContent = 'Visualization of K Means Clustering Results on Data Instructor';
+            document.getElementById('statusBox').textContent = 'Visualization of K-Means Clustering Results on Data Instructor';
             renderScatterPlot(data);
         })
         .catch(error => {
@@ -87,12 +87,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                     `Instructor: ${point.instructor}`,
                                     `Grade: ${point.x.toFixed(2)}`,
                                     `Attendance: ${point.y.toFixed(2)}%`,
-                                    `Difficulty: ${point.difficulty || 'N/A'}`,  // Tambahan label difficulty level
+                                    `Difficulty: ${point.difficulty || 'N/A'}`,
                                     `Semester: ${point.semester || 'N/A'}`,
                                     `Total Student: ${point.total_student || 'NA'}`
                                 ];
                             }
-                        }
+                        },
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        titleColor: '#000',
+                        bodyColor: '#000',
+                        borderColor: '#ddd',
+                        borderWidth: 1
                     }
                 },
                 scales: {
@@ -109,6 +114,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         max: gradeMax,
                         grid: {
                             color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            color: '#333'
                         }
                     },
                     y: {
@@ -124,6 +132,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         max: attendanceMax,
                         grid: {
                             color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            color: '#333'
                         }
                     }
                 },
@@ -131,8 +142,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     point: {
                         hoverBorderWidth: 2
                     }
+                },
+                // Ini yang diubah untuk background putih
+                backgroundColor: '#fff',
+                animation: {
+                    onComplete: function() {
+                        // Set background color after animation completes
+                        ctx.canvas.style.backgroundColor = '#fff';
+                    }
                 }
             }
         });
+        
+        // Set background color immediately
+        ctx.canvas.style.backgroundColor = '#fff';
     }
 });

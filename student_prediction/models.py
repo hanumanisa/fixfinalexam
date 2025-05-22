@@ -10,13 +10,16 @@ class Department(models.Model):
 
 
 class Student(models.Model):
-    stu_id = models.IntegerField(primary_key=True)
+    stu_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
     department = models.ForeignKey(Department, on_delete=models.DO_NOTHING, db_column='dept_id', null=True, blank=True)
 
     class Meta:
         db_table = 'student'
         managed = False
+
+    def __str__(self):
+        return self.name
 
 
 class Course(models.Model):
@@ -42,7 +45,7 @@ class CourseDifficulty(models.Model):
 
 
 class Enrollment(models.Model):
-    enroll_id = models.IntegerField(primary_key=True)
+    enroll_id = models.AutoField(primary_key=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, db_column='course_id', null=True, blank=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, db_column='stu_id', null=True, blank=True)
 
@@ -50,9 +53,20 @@ class Enrollment(models.Model):
         db_table = 'enrollment'
         managed = False
 
+class Attendance(models.Model):
+    attendance_id = models.AutoField(primary_key=True)
+    enroll = models.ForeignKey(Enrollment, on_delete=models.CASCADE, db_column='enroll_id')
+    attendance_percentage = models.IntegerField()
+
+    class Meta:
+        db_table = 'attendance'
+        managed = False
+
+    def __str__(self):
+        return f"{self.enroll.student.name} - {self.attendance_percentage}%"
 
 class Assessment(models.Model):
-    assessment_id = models.IntegerField(primary_key=True)
+    assessment_id = models.AutoField(primary_key=True)
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, db_column='enroll_id', null=True, blank=True)
     assessment_type = models.CharField(max_length=50)
     score = models.IntegerField()
@@ -61,6 +75,8 @@ class Assessment(models.Model):
         db_table = 'assessment'
         managed = False
 
+    def __str__(self):
+        return f"{self.enrollment.student.name} - Score: {self.score}"
 
 class CourseRecommendation(models.Model):
     course1 = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='recommendation_from')
@@ -73,3 +89,18 @@ class CourseRecommendation(models.Model):
     class Meta:
         db_table = 'course_recommendation'
         managed = True 
+
+class ModelInfo(models.Model):    
+    model_name = models.CharField(max_length=255)
+    model_encorlabel = models.CharField(max_length=255, default='LabelEncoder')
+    model_file = models.CharField(max_length=255)
+    training_data = models.CharField(max_length=255, default='learnstyle_dataset.csv')
+    training_date = models.DateTimeField()
+    model_summary = models.TextField()
+
+    class Meta:    
+        db_table = 'modelinfo'  
+        managed = True
+
+    def __str__(self):    
+        return self.model_name

@@ -1,6 +1,3 @@
-
-
-from django.shortcuts import render
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib import messages
@@ -12,6 +9,11 @@ from io import BytesIO
 import base64
 import json
 from student_prediction.utils.apriori_rules_hanum import analyze_courses
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import joblib
+import numpy as np
+from django.conf import settings
 
 def home(request):
     return render(request, 'student_prediction/home.html')  
@@ -24,6 +26,47 @@ def alfira_predictdashboard(request):
 
 def najla_predictdashboard(request):  
     return render(request, 'student_prediction/najla_predictdashboard.html') 
+MODEL_PATH = os.path.join(settings.BASE_DIR, 'final_learnstyle_model.pkl')
+ENCODER_PATH = os.path.join(settings.BASE_DIR, 'learnstyle_label_encoder.pkl')
+
+try:
+    MODEL = joblib.load(MODEL_PATH)
+    LABEL_ENCODER = joblib.load(ENCODER_PATH)
+except FileNotFoundError as e:
+    MODEL = None
+    LABEL_ENCODER = None
+    print(f"Model file not found: {e}")
+
+@csrf_exempt
+def predict_learnstyle(request):
+    if request.method == 'POST':
+        if MODEL is None or LABEL_ENCODER is None:
+            return JsonResponse({'error': 'Model not loaded.'}, status=500)
+
+        try:
+            data = json.loads(request.body)
+            name = data.get('name', 'Unknown')
+            avg_score = float(data.get('avg_score', 0))
+            attendance = float(data.get('attendance', 0))
+
+            input_data = np.array([[avg_score, attendance]])
+            prediction_encoded = MODEL.predict(input_data)[0]
+            prediction_proba = MODEL.predict_proba(input_data)[0]
+
+            prediction_label = LABEL_ENCODER.inverse_transform([prediction_encoded])[0]
+
+            response = {
+                'name': name,
+                'prediction': prediction_label,
+                'probability': prediction_proba.tolist(),
+                'labels': LABEL_ENCODER.classes_.tolist()
+            }
+            return JsonResponse(response)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 def safira_predictdashboard(request):  
     return render(request, 'student_prediction/safira_predictdashboard.html') 

@@ -23,13 +23,13 @@ class Command(BaseCommand):
             avg = row['avg_assessment_score']
             att = row['attendance_percentage']
             if avg >= 70 and att >= 70:
-                return 'smart and diligent'
+                return 'Smart and Diligent'
             elif avg >= 70 and att < 70:
-                return 'smart but absent'
+                return 'Smart but Absent'
             elif avg < 70 and att >= 70:
-                return 'diligent but difficult'
+                return 'Diligent but Struggling'
             else:
-                return 'problematic'
+                return 'Needs Support'
 
         df['learn_style'] = df.apply(classify_style, axis=1)
 

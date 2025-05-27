@@ -57,15 +57,6 @@
         .navbar-nav .nav-item.dropdown .dropdown-divider {
             border-top: 1px solid #6c757d;
         }
-
-        .card-img-fixed {
-            width: 100% !important;
-            height: 200px !important;
-            object-fit: cover !important;
-            object-position: center !important;
-            display: block;
-        }
-        
         .footer {
             background-color: #343a40;
             color: #fff;
@@ -76,6 +67,47 @@
             height: 60px;
             text-align: center;
         }
+.card {
+        width: 18rem; /* sedikit dilebarkan */
+        height: 650px; /* sesuaikan tinggi agar proporsional */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-text {
+        flex-grow: 1;
+        overflow-y: auto;
+        font-size: 0.9rem;
+        word-wrap: break-word; /* pastikan teks tidak keluar */
+        white-space: normal;
+    }
+
+    .btn {
+        margin-top: auto;
+    }
+
+    .card-img-fixed {
+        width: 100% !important;
+        height: 280px !important;
+        object-fit: cover !important;
+        object-position: center !important;
+        display: block;
+    }
+
+    /* Optional scrollbar styling */
+    .card-text::-webkit-scrollbar {
+        width: 4px;
+    }
+    .card-text::-webkit-scrollbar-thumb {
+        background-color: #ccc;
+        border-radius: 2px;
+    }
     </style>
 </head>
 <body>
@@ -118,8 +150,8 @@
             <h3 style="font-weight: bold; margin-top: 30px;">Member Performance</h3>
         </center>
         <div class="d-flex flex-wrap justify-content-center align-items-center gap-4 p-3" style="min-height: 50vh;">      
-            <div class="card" style="width: 15rem;">
-                <img src="{% static 'student_prediction/images/Alfira.jpg' %}" alt="President University" class="card-img-top card-img-fixed">
+            <div class="card">
+                <img src="{% static 'student_prediction/images/Alfira.jpg' %}" alt="President University" width="100px" class="card-img-top card-img-fixed">
                 <div class="card-body">
                     <h5 class="card-title" style="font-weight: bold;">Alfira Kamila Bilqist</h5>
                     <p class="card-text">
@@ -127,12 +159,11 @@
                             Applies the KMeans algorithm to group instructors based on average grade, attendance, total students, difficulty level, and semester. <br>
 
                         2. Clustering Result Visualization
-                            Displays the clustering output in a table and chart. Users can input new instructor data and see which cluster it belongs to.
+                            Displays the clustering output in chart. Users can input new instructor data and see which cluster it belongs to.
                     </p>
-                    <a href="#" class="btn btn-outline-success">Go somewhere</a>
                 </div>
             </div>
-            <div class="card" style="width: 15rem;">
+            <div class="card">
                 <img src="{% static 'student_prediction/images/Hanum.jpg' %}" alt="President University" class="card-img-top card-img-fixed">
                 <div class="card-body">
                     <h5 class="card-title" style="font-weight: bold;">Hanum Anisa Rahma</h5>
@@ -145,23 +176,21 @@
 
                         3. Create Homepage
                         Show recommendation list 
-                        Provide access to recommendation details and other info <br>
+                        Provide access to recommendation details and other info <br>
                     </p>
-                    <a href="#" class="btn btn-outline-success">Go somewhere</a>
                 </div>
             </div>
-            <div class="card" style="width: 15rem;">
+            <div class="card">
                 <img src="{% static 'student_prediction/images/Najla.jpg' %}" alt="President University" class="card-img-top card-img-fixed">
                 <div class="card-body">
                     <h5 class="card-title" style="font-weight: bold;">Najla Haura N.H</h5>
                     <p class="card-text">
-                        Learn Style Prediction using Random Forest Classifier <br>
-                        Implemented a Random Forest Classifier to predict student learning styles based on average academic scores and attendance. Users input their data through a prediction form, and results are displayed in both a table (name, score, attendance, predicted style) and a bar chart showing the probability distribution across learning style categories such as smart and diligent, smart but absent, diligent but having difficulties, and problematic.
+                        Learning Style Prediction using Random Forest Classifier <br>
+                        Used a Random Forest Classifier model to predict student learning styles by analyzing their average grades and attendance. The system allows users to input their data through a form, then displays the predicted learning style in a table format along with a bar chart that visualizes the probability distribution across categories.
                     </p>
-                    <a href="#" class="btn btn-outline-success">Go somewhere</a>
                 </div>
             </div>
-            <div class="card" style="width: 15rem;">
+            <div class="card">
                 <img src="{% static 'student_prediction/images/Safira.jpg' %}" alt="President University" class="card-img-top card-img-fixed">
                 <div class="card-body">
                     <h5 class="card-title" style="font-weight: bold;">Safira Nurarbaini P</h5>
@@ -169,7 +198,6 @@
                         Semester Recommendation using Random Forest Regressor <br>
                         Utilized a Random Forest Regressor to generate semester recommendations. This model leverages historical student data, such as average grades and attendance, to predict suitable courses for upcoming semesters.
                     </p>
-                    <a href="#" class="btn btn-outline-success">Go somewhere</a>
                 </div>
             </div>
         </div>

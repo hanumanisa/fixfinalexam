@@ -90,7 +90,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 60px; /* bisa disesuaikan */
+            height: 60px;
             text-align: center;
         }
     </style>
@@ -134,7 +134,7 @@
     <div class="main-content">
         <div class="container" style="max-width: 950px; margin: 20px auto; padding: 20px;">
             <div class="card mb-4">
-                <div class="card-header">From Prediction</div>
+                <div class="card-header">Form Prediction</div>
                 <div class="card-body">
                     <form id="predictionForm">
                         <div class="mb-2">
@@ -149,7 +149,11 @@
                             <label for="attendance" class="form-label">Attendance Percentage:</label>
                             <input type="number" id="attendance" class="form-control" required step="0.1" min="0" max="100">
                         </div>
-                        <button type="submit" class="btn btn-outline-success">Predict</button>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-outline-success">Predict</button>
+                            <button type="button" id="clearBtn" class="btn btn-outline-danger">Clear Form</button>
+                            <button type="button" id="clearallBtn" class="btn btn-outline-danger">Clear All</button>
+                        </div>
                     </form>
                     <div id="statusBox" class="alert alert-secondary mt-3">The predicted results will appear here.</div> 
                 </div>
@@ -217,7 +221,26 @@
                 if (data.error) throw new Error(data.error);
 
                 statusBox.className = 'alert alert-success mt-3';
-                statusBox.textContent = `Name: ${data.name}, Learn Style Predict: ${data.prediction}`;
+
+                let message = '';
+                switch (data.prediction) {
+                    case 'Smart and Diligent':
+                        message = 'This student is truly exceptional Intelligent and Hardworking. A perfect combination!';
+                        break;
+                    case 'Smart but Absent':
+                        message = 'This student is Intelligent, but needs to improve attendance to reach full potential.';
+                        break;
+                    case 'Diligent but Struggling':
+                        message = 'This student is Hardworking and Determined. Needs support to better understand the material.';
+                        break;
+                    case 'Needs Support':
+                        message = 'These students require extra attention and guidance to support their learning progress.';
+                        break;
+                    default:
+                        message = 'Prediction not recognized.';
+                }
+
+                statusBox.innerHTML = `Name: ${data.name} <br> Learn Style Predict: ${data.prediction} <br> ${message}`;
 
                 const tableBody = document.getElementById('resultBody');
                 const newRow = document.createElement('tr');
@@ -264,10 +287,44 @@
                 });
 
             } catch (error) {
+                statusBox.className = 'alert alert-danger mt-3';
                 statusBox.textContent = `Error: ${error.message}`;
                 console.error(error);
             }
         });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            document.getElementById('name').value = '';
+            document.getElementById('avg_score').value = '';
+            document.getElementById('attendance').value = '';
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = 'alert alert-secondary mt-3';
+            statusBox.innerHTML = 'The predicted results will appear here.';
+            if (predictionChart) {
+                predictionChart.destroy();
+                predictionChart = null;
+            }
+        });
+
+        document.getElementById('clearallBtn').addEventListener('click', () => {
+            document.getElementById('name').value = '';
+            document.getElementById('avg_score').value = '';
+            document.getElementById('attendance').value = '';
+
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = 'alert alert-secondary mt-3';
+            statusBox.innerHTML = 'The predicted results will appear here.';
+
+            // Hapus chart jika ada
+            if (predictionChart) {
+                predictionChart.destroy();
+                predictionChart = null;
+            }
+
+            // Hapus isi tabel
+            document.getElementById('resultBody').innerHTML = '';
+        });
+
     </script>
 </body>
 </html>

@@ -14,19 +14,22 @@ from django.views.decorators.csrf import csrf_exempt
 import joblib
 import numpy as np
 from django.conf import settings
-
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.conf import settings
 from .forms import InstructorPerformanceForm
-
 from django.db import connection
 from .forms import CourseRecommendationForm
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 from django.db import reset_queries
 from .models import Course, Semester, Enrollment, Attendance, CourseDifficulty, ModelInfo
-
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import classification_report
+from django.utils import timezone
+from django.shortcuts import get_object_or_404, redirect
+from student_prediction.models import ModelInfo
 
 def home(request):
     return render(request, 'student_prediction/home.html')  
@@ -36,7 +39,6 @@ def about(request):
 
 def alfira_predictdashboard(request):  
     return render(request, 'student_prediction/alfira_predictdashboard.html') 
-
 
 def instructor_clusters_api(request):
     df = pd.read_csv('all_courses_clustered.csv')  
@@ -64,9 +66,6 @@ def instructor_clusters_api(request):
     }
     return JsonResponse(response_data)
 
-
-
-
 def load_kmeans_model():
     model_path = os.path.join(settings.BASE_DIR, 'kmeans_model.pkl')
     if not os.path.exists(model_path):
@@ -79,8 +78,6 @@ def load_kmeans_model():
     except Exception as e:
         print(f"Error loading model: {e}")
         return None
-
-
 
 def predict_cluster(request):
     if request.method == 'POST':
@@ -188,9 +185,6 @@ def predict_cluster(request):
     }
     return render(request, 'student_prediction/alfira_predictdashboard.html', context)
 
-
-
-
 def cluster_visualization(request):
     df = pd.read_csv('all_courses_clustered.csv')
 
@@ -233,18 +227,6 @@ def cluster_visualization(request):
     }
 
     return render(request, 'student_prediction/alfira_predictdashboard.html', context)
-
-
-
-
-
-
-
-
-
-
-
-
 
 def najla_predictdashboard(request):  
     return render(request, 'student_prediction/najla_predictdashboard.html') 
@@ -289,6 +271,57 @@ def predict_learnstyle(request):
             return JsonResponse({'error': str(e)}, status=400)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+def retrain_model(request, pk):
+    model_info = get_object_or_404(ModelInfo, pk=pk)
+
+    df = pd.read_csv('learnstyle_dataset.csv')
+
+    # Validasi kolom
+    if not {'avg_assessment_score', 'attendance_percentage'}.issubset(df.columns):
+        # Tambahkan error handling sesuai kebutuhan
+        return redirect('/admin/student_prediction/modelinfo/')
+
+    def classify_style(row):
+        avg = row['avg_assessment_score']
+        att = row['attendance_percentage']
+        if avg >= 70 and att >= 70:
+            return 'Smart and Diligent'
+        elif avg >= 70 and att < 70:
+            return 'Smart but Absent'
+        elif avg < 70 and att >= 70:
+            return 'Diligent but Struggling'
+        else:
+            return 'Needs Support'
+
+    df['learn_style'] = df.apply(classify_style, axis=1)
+
+    X = df[['avg_assessment_score', 'attendance_percentage']]
+    y = df['learn_style']
+
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X, y_encoded)
+
+    y_pred = model.predict(X)
+    report = classification_report(y_encoded, y_pred, target_names=label_encoder.classes_)
+
+    model_filename = 'final_learnstyle_model.pkl'
+    encoder_filename = 'learnstyle_label_encoder.pkl'
+
+    joblib.dump(model, model_filename)
+    joblib.dump(label_encoder, encoder_filename)
+
+    # Update ModelInfo
+    model_info.model_file = model_filename
+    model_info.training_data = 'learnstyle_dataset.csv'
+    model_info.training_date = timezone.now()
+    model_info.model_summary = report
+    model_info.save()
+
+    return redirect('/admin/student_prediction/modelinfo/')
 
 def analysis(request):
     return render(request, 'student_prediction/hanum_analysis.html')

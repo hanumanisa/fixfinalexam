@@ -30,6 +30,7 @@ from sklearn.metrics import classification_report
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect
 from student_prediction.models import ModelInfo
+import subprocess
 
 def home(request):
     return render(request, 'student_prediction/home.html')  
@@ -37,19 +38,19 @@ def home(request):
 def about(request):
     return render(request, 'student_prediction/about.html')  
 
-def alfira_predictdashboard(request):  
-    return render(request, 'student_prediction/alfira_predictdashboard.html') 
 
 def instructor_clusters_api(request):
-    df = pd.read_csv('all_courses_clustered.csv')  
+    df = pd.read_csv('all_courses_clustered_k4.csv')  # File baru
 
     cluster_counts = df['cluster'].value_counts().to_dict()
 
     def get_cluster_points(cluster_num):
         cluster_df = df[df['cluster'] == cluster_num]
         return [{
-            'x': row['avg_grade'],
-            'y': row['avg_attendance'],
+            'x': row['pca_1'],
+            'y': row['pca_2'],
+            'avg_grade': row['avg_grade'],    
+            'avg_attendance': row['avg_attendance'],
             'instructor': row['instructor_name'],
             'semester': row['semester_name'],
             'total_student': row['student_count'],
@@ -60,14 +61,26 @@ def instructor_clusters_api(request):
         'cluster_0_count': cluster_counts.get(0, 0),
         'cluster_1_count': cluster_counts.get(1, 0),
         'cluster_2_count': cluster_counts.get(2, 0),
+        'cluster_3_count': cluster_counts.get(3, 0),
         'cluster_0_points': get_cluster_points(0),
         'cluster_1_points': get_cluster_points(1),
         'cluster_2_points': get_cluster_points(2),
+        'cluster_3_points': get_cluster_points(3),
     }
+
     return JsonResponse(response_data)
 
+
+WEIGHTS = {
+    'avg_grade': 3,
+    'avg_attendance': 3,
+    'semester_enc': 1,
+    'difficulty_enc': 3,
+    'student_count': 1
+}
+
 def load_kmeans_model():
-    model_path = os.path.join(settings.BASE_DIR, 'kmeans_model.pkl')
+    model_path = os.path.join(settings.BASE_DIR, 'kmeans_model_k4.pkl')
     if not os.path.exists(model_path):
         print("Model file does not exist")
         return None
@@ -78,6 +91,21 @@ def load_kmeans_model():
     except Exception as e:
         print(f"Error loading model: {e}")
         return None
+    
+
+def load_scaler():
+    scaler_path = os.path.join(settings.BASE_DIR, 'scaler_k4.pkl')
+    if not os.path.exists(scaler_path):
+        print("Scaler file does not exist")
+        return None
+    try:
+        scaler = joblib.load(scaler_path)
+        print(f"Scaler loaded: {scaler}")
+        return scaler
+    except Exception as e:
+        print(f"Error loading scaler: {e}")
+        return None
+
 
 def predict_cluster(request):
     if request.method == 'POST':
@@ -85,7 +113,6 @@ def predict_cluster(request):
         if form.is_valid():
             print("Cleaned data:", form.cleaned_data)
             try:
-                # Get form data
                 avg_grade = form.cleaned_data['avg_grade']
                 avg_attendance = form.cleaned_data['avg_attendance']
                 student_count = form.cleaned_data['total_student']
@@ -121,6 +148,8 @@ def predict_cluster(request):
                         'difficulty': difficulty,
                         'semester': semester
                     }, status=400)
+                
+                feature_names = ['avg_grade', 'avg_attendance', 'semester_enc', 'student_count', 'difficulty_enc']
             
                 input_data = [[
                     avg_grade,
@@ -129,31 +158,40 @@ def predict_cluster(request):
                     student_count,
                     float(difficulty)  
                 ]]
-                print(f"Input data: {input_data}")
-                
+
+                input_df = pd.DataFrame(input_data, columns=feature_names)
+
+                # Load scaler
+                scaler = load_scaler()
+                if scaler is None:
+                    return JsonResponse({'error': 'Scaler not found'}, status=500)
+
+                input_df_weighted = input_df.copy()
+                for feature in feature_names:
+                    input_df_weighted[feature] *= WEIGHTS[feature]
+
+                input_scaled = scaler.transform(input_df_weighted)
+
                 try:
                     print("Trying to load KMeans model...")
-                    kmeans = load_kmeans_model()  # <-- Ini model, bukan path
+                    kmeans = load_kmeans_model() 
                     if kmeans is None:
                         print("Model loading failed!")
+                        return JsonResponse({'error': 'Model loading failed'}, status=500)
                     else:
                         print(f"Model n_features_in_: {kmeans.n_features_in_}")
-
-                    feature_names = ['avg_grade', 'avg_attendance', 'semester_enc', 'student_count', 'difficulty_enc']
-                    # Ubah input_data list jadi DataFrame dengan kolom yang benar
-                    input_df = pd.DataFrame(input_data, columns=feature_names)
+                        
                     # Lalu prediksi pakai DataFrame
-                    cluster = kmeans.predict(input_df)[0]
-                    print(f"Predicted cluster: {cluster}")
-
-                    prediction = kmeans.predict(input_df)
+                    prediction = kmeans.predict(input_scaled)
                     print(f"Raw prediction output: {prediction}")
                     cluster = prediction[0]
+                    print(f"Predicted cluster: {cluster}")
                    
                     cluster_descriptions = {
-                        0: "Cluster A",
-                        1: "Cluster B",
-                        2: "Cluster C",
+                        0: "High performance - instructors with excellent grades and attendance",
+                        1: "Medium to High performance - instructors with good grades and attendance",
+                        2: "Medium to Low performance - instructors with average grades and attendance",
+                        3: "Low performance - instructors needing improvement in grades or attendance",
                     }
                     description = cluster_descriptions.get(cluster, "Unknown cluster")
                     return JsonResponse({
@@ -181,12 +219,28 @@ def predict_cluster(request):
 
     context = {
         'form': form,
-        # Include other context data you need for the visualization
     }
+
     return render(request, 'student_prediction/alfira_predictdashboard.html', context)
 
+
+
+def get_difficulty_level(request):
+    course_id = request.GET.get('course_id')
+    try:
+        course = Course.objects.get(pk=course_id)
+        course_difficulty = CourseDifficulty.objects.get(course=course)
+        return JsonResponse({'difficulty_level': course_difficulty.difficulty_level})
+    except CourseDifficulty.DoesNotExist:
+        return JsonResponse({'error': 'Difficulty not found'}, status=404)
+    except Course.DoesNotExist:
+        return JsonResponse({'error': 'Course not found'}, status=404)
+
+
+
+
 def cluster_visualization(request):
-    df = pd.read_csv('all_courses_clustered.csv')
+    df = pd.read_csv('all_courses_clustered_k4.csv')
 
     # Your existing data preparation code...
     cluster_data = df.to_dict('records')
@@ -202,8 +256,10 @@ def cluster_visualization(request):
     def get_cluster_points(cluster_num):
         cluster_df = df[df['cluster'] == cluster_num]
         return [{
-            'x': row['avg_grade'],
-            'y': row['avg_attendance'],
+            'x': row['pca_1'],
+            'y': row['pca_2'],
+            'avg_grade': row['avg_grade'],   
+            'avg_attendance': row['avg_attendance'],
             'instructor': row['instructor_name'],
             'total_student': row['student_count'],
             'semester': row['semester_name'],
@@ -218,15 +274,38 @@ def cluster_visualization(request):
         'cluster_0_count': cluster_counts.get(0, 0),
         'cluster_1_count': cluster_counts.get(1, 0),
         'cluster_2_count': cluster_counts.get(2, 0),
+        'cluster_3_count': cluster_counts.get(3, 0),
         'cluster_0_avg': cluster_avgs.get(0, {'avg_grade': 0, 'avg_attendance': 0, 'student_count': 0}),
         'cluster_1_avg': cluster_avgs.get(1, {'avg_grade': 0, 'avg_attendance': 0, 'student_count': 0}),
         'cluster_2_avg': cluster_avgs.get(2, {'avg_grade': 0, 'avg_attendance': 0, 'student_count': 0}),
+        'cluster_3_avg': cluster_avgs.get(3, {'avg_grade': 0, 'avg_attendance': 0, 'student_count': 0}),
         'cluster_0_points': json.dumps(get_cluster_points(0)),
         'cluster_1_points': json.dumps(get_cluster_points(1)),
         'cluster_2_points': json.dumps(get_cluster_points(2)),
+        'cluster_3_points': json.dumps(get_cluster_points(3)),
     }
 
     return render(request, 'student_prediction/alfira_predictdashboard.html', context)
+
+
+
+def silhouette_score_api(request):
+    csv_path = os.path.join(settings.BASE_DIR, 'silhouette_score_k4.csv')
+
+    if not os.path.exists(csv_path):
+        subprocess.run(['python', 'ml_ins.py'])
+    df = pd.read_csv(csv_path)  # harus baca CSV dengan pandas
+
+    ks = df['k'].tolist()
+    silhouette_scores = df['silhouette_score'].tolist()
+
+    data = {
+        'ks': ks,
+        'silhouette_scores': silhouette_scores,
+    }
+    return JsonResponse(data)
+
+
 
 def najla_predictdashboard(request):  
     return render(request, 'student_prediction/najla_predictdashboard.html') 

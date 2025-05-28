@@ -1,6 +1,5 @@
 document.getElementById('predictionForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                // Get form data
                 const formData = new FormData(this);
                 
                 // Send AJAX request
@@ -33,8 +32,10 @@ document.getElementById('predictionForm').addEventListener('submit', function(e)
             function getClusterDescription(cluster) {
                 const descriptions = {
                     0: "High performance - instructors with excellent grades and attendance",
-                    1: "Average performance - instructors with moderate grades and attendance",
-                    2: "Low performance - instructors needing improvement in grades or attendance"
+                    1: "Medium to High performance - instructors with good grades and attendance",
+                    2: "Medium to Low performance - instructors with average grades and attendance",
+                    3: "Low performance - instructors needing improvement in grades or attendance",
                 };
-                return descriptions[cluster] || "Unknown cluster";
+                console.log("Cluster:", cluster, "Description:", descriptions[cluster]);
+                return descriptions[cluster] || "Unknown cluster"
             }

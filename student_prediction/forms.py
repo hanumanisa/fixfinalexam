@@ -27,18 +27,15 @@ class InstructorPerformanceForm(forms.Form):
     semester = forms.ModelChoiceField(
         queryset=Semester.objects.all().distinct(),
         label="Semester",
+        #to_field_name='semester_name'
     )
     total_student = forms.IntegerField(
         label="Total Students",
         min_value=1
     )
-    difficulty_level = forms.ChoiceField(
+    difficulty_level = forms.CharField(
         label="Difficulty Level",
-        choices=[
-            ('Easy', 'Easy'),
-            ('Medium', 'Medium'),
-            ('Hard', 'Hard'),
-        ]   
+        widget=forms.TextInput(attrs={'readonly': 'readonly'})
     )
 
 class CourseRecommendationForm(forms.Form):

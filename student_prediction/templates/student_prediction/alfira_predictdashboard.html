@@ -21,11 +21,33 @@
 
             .chart-container {
                 position: relative;
-                width: 100%;
-                max-width: 1000px;
-                height: 600px;
-                margin: 20px auto;
+                max-width: 1500px !important;
+                margin: 10px auto;
+                padding: 10px;
+                background-color: #ffffff;
+                border-radius: 10px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             }
+
+            .charts-row {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 40px;
+                flex-wrap: wrap;
+            }
+
+            .chart-wrapper {
+                flex: 0 0 auto;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background-color: #f9f9f9;
+                padding: 15px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
             #statusBox {
                 padding: 10px;
                 margin: 10px 0;
@@ -155,12 +177,28 @@
             </div>
         </div>
     </nav>
+    <h2>Instructor Performance Clustering</h2>
+        
+        <div id="statusBox">Loading cluster data...</div>
+
+        <div class="chart-container">
+            <div class="charts-row">
+                <div class="chart-wrapper">
+                    <canvas id="silhouetteChart" width="400" height="250"></canvas>
+                </div>      
+                <div class="chart-wrapper">
+                    <canvas id="scatterChart" width="700" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+
 
 
         <div class="prediction-form">
             <h3>Input Form</h3>
             <form id="predictionForm" method="post">
                 {% csrf_token %}
+                
                 <div class="form-row">
                     <div class="form-col">
                         <div class="form-group">
@@ -190,14 +228,14 @@
                 <div class="form-row">
                     <div class="form-col">
                         <div class="form-group">
-                            <label for="id_avg_grade">Average Grade:</label>
+                            <label for="id_avg_grade">Average Grade: (0-100)</label>
                             <input type="number" name="avg_grade" id="id_avg_grade" step="0.01" min="0" max="100" required>
                         </div>
                     </div>
                     
                     <div class="form-col">
                         <div class="form-group">
-                            <label for="id_avg_attendance">Average Attendance:</label>
+                            <label for="id_avg_attendance">Average Attendance: (0-100)</label>
                             <input type="number" name="avg_attendance" id="id_avg_attendance" step="0.01" min="0" max="100" required>
                         </div>
                     </div>
@@ -218,21 +256,17 @@
                     
                     <div class="form-col">
                         <div class="form-group">
-                            <label for="id_total_student">Total Students:</label>
-                            <input type="number" name="total_student" id="id_total_student" min="1" required>
+                            <label for="id_total_student">Total Students: (20-40)</label>
+                            <input type="number" name="total_student" id="id_total_student" min="20" max="40" required>
                         </div>
                     </div>
                 </div>
                 
                 <div class="form-group">
                     <label for="id_difficulty_level">Difficulty Level:</label>
-                    <select name="difficulty_level" id="id_difficulty_level" class="form-control" required>
-                        <option value="" selected disabled>Select Difficulty</option>
-                            {% for value, label in form.difficulty_level.field.choices %}
-                                <option value="{{ value }}">{{ label }}</option>
-                            {% endfor %}
-                    </select>
+                    <input type="text" name="difficulty_level" id="id_difficulty_level" class="form-control" readonly required>
                 </div>
+
 
                 <button type="submit" class="form-submit">Predict Cluster</button>
                 <button type="button" id="clearButton" class="form-clear">Clear</button>
@@ -244,15 +278,26 @@
                     <p>Cluster Description: <span id="clusterDescription"></span></p>
             </div>
         </div>
+        <script>
+            document.getElementById('id_course_name').addEventListener('change', function () {
+                var courseId = this.value;
+                fetch(`/get_difficulty/?course_id=${courseId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.difficulty_level) {
+                            document.getElementById('id_difficulty_level').value = data.difficulty_level;
+                        } else {
+                            document.getElementById('id_difficulty_level').value = 'Not Found';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching difficulty:', error);
+                    });
+            });
+        </script>
 
-        <div id="statusBox">Loading cluster data...</div>
-
-        <div class="chart-container">
-            <canvas id="scatterChart"></canvas>
-        </div>
-    
-        <script src="{% static 'student_prediction/js/testing.js'%}"></script>
         <script src="{% static 'student_prediction/js/cluster_viz.js' %}"></script>
+        <script src="{% static 'student_prediction/js/testing.js'%}"></script>
         
         <footer class="footer no-print">
         <div class="container text-center">

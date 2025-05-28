@@ -17,4 +17,6 @@ urlpatterns = [
     path('analyze/', views.analyze, name='hanum_analysis'),  
     path('api/instructor_clusters/', views.instructor_clusters_api, name='instructor_clusters_api'),
     path('predict-cluster/', views.predict_cluster, name='predict_cluster'),
+    path('api/silhouette_data/', views.silhouette_score_api, name='silhouette_score_api'),
+    path('get_difficulty/', views.get_difficulty_level, name='get_difficulty_level'),
 ]

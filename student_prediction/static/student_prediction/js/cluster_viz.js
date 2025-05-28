@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/instructor_clusters/')
         .then(response => response.json())
         .then(data => {
-            document.getElementById('statusBox').textContent = 'Visualization of K-Means Clustering Results on Data Instructor';
+            document.getElementById('statusBox').textContent = 'Visualization of K-Means Clustering Results on Data Instructor (after PCA)';
             renderScatterPlot(data);
         })
         .catch(error => {
@@ -10,16 +10,32 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('statusBox').textContent = 'Failed to load cluster data';
         });
 
+    
+    fetch('/api/silhouette_data/')
+        .then(response => response.json())
+        .then(data => {
+            renderSilhouetteChart(data.ks, data.silhouette_scores);
+        })
+        .catch(error => {
+            console.error('Error fetching silhouette data:', error);
+        });
+
     function renderScatterPlot(data) {
         const ctx = document.getElementById('scatterChart').getContext('2d');
 
-        const allPoints = [...data.cluster_0_points, ...data.cluster_1_points, ...data.cluster_2_points];
-        const grades = allPoints.map(p => p.x);
-        const attendances = allPoints.map(p => p.y);
-        const gradeMin = Math.min(...grades) - 2;
-        const gradeMax = Math.max(...grades) + 2;
-        const attendanceMin = Math.min(...attendances) - 2;
-        const attendanceMax = Math.max(...attendances) + 2;
+        const allPoints = [...data.cluster_0_points, ...data.cluster_1_points, ...data.cluster_2_points, ...data.cluster_3_points];
+        const backgroundColorPlugin = {
+            id: 'custom_canvas_background_color',
+            beforeDraw: (chart) => {
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = '#f0f0f0'; 
+                ctx.fillRect(0, 0, chart.width, chart.height);
+                ctx.restore();
+            }
+        };
+        
 
         new Chart(ctx, {
             type: 'scatter',
@@ -35,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         pointHoverRadius: 10
                     },
                     {
-                        label: 'Cluster 1 (Medium Performance)',
+                        label: 'Cluster 1 (Medium to High Performance)',
                         data: data.cluster_1_points,
                         backgroundColor: 'rgba(75, 192, 192, 0.7)',
                         borderColor: 'rgba(75, 192, 192, 1)',
@@ -44,8 +60,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         pointHoverRadius: 10
                     },
                     {
-                        label: 'Cluster 2 (Low Performance)',
+                        label: 'Cluster 2 (Medium to Low Performance)',
                         data: data.cluster_2_points,
+                        backgroundColor: 'rgba(192, 137, 75, 0.7)',
+                        borderColor: 'rgba(192, 137, 75, 1)',
+                        borderWidth: 1,
+                        pointRadius: 8,
+                        pointHoverRadius: 10
+                    },
+                    {
+                        label: 'Cluster 3 (Low Performance)',
+                        data: data.cluster_3_points,
                         backgroundColor: 'rgba(255, 99, 132, 0.7)',
                         borderColor: 'rgba(255, 99, 132, 1)',
                         borderWidth: 1,
@@ -60,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Instructor Performance Cluster Visualization',
+                        text: 'Instructor Clustering Visualization (PCA-Transformed Data)',
                         font: { 
                             size: 18,
                             weight: 'bold'
@@ -85,56 +110,41 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const point = context.raw;
                                 return [
                                     `Instructor: ${point.instructor}`,
-                                    `Grade: ${point.x.toFixed(2)}`,
-                                    `Attendance: ${point.y.toFixed(2)}%`,
-                                    `Difficulty: ${point.difficulty || 'N/A'}`,
+                                    `Grade: ${point.avg_grade.toFixed(2)}`,
+                                    `Attendance: ${point.avg_attendance.toFixed(2)}%`,
+                                    `Difficulty: ${point.difficulty || 'N/A'}`,  
                                     `Semester: ${point.semester || 'N/A'}`,
                                     `Total Student: ${point.total_student || 'NA'}`
                                 ];
                             }
-                        },
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        titleColor: '#000',
-                        bodyColor: '#000',
-                        borderColor: '#ddd',
-                        borderWidth: 1
+                        }
                     }
                 },
                 scales: {
                     x: {
                         title: {
                             display: true,
-                            text: 'Average Grade',
+                            text: 'Principal Component 1',
                             font: { 
                                 weight: 'bold',
                                 size: 14
                             }
                         },
-                        min: gradeMin,
-                        max: gradeMax,
                         grid: {
                             color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        ticks: {
-                            color: '#333'
                         }
                     },
                     y: {
                         title: {
                             display: true,
-                            text: 'Average Attendance (%)',
+                            text: 'Principal Component 2',
                             font: { 
                                 weight: 'bold',
                                 size: 14
                             }
                         },
-                        min: attendanceMin,
-                        max: attendanceMax,
                         grid: {
                             color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        ticks: {
-                            color: '#333'
                         }
                     }
                 },
@@ -142,19 +152,85 @@ document.addEventListener('DOMContentLoaded', function() {
                     point: {
                         hoverBorderWidth: 2
                     }
+                }
+            },
+            plugins: [backgroundColorPlugin]
+        });
+    }
+// Fungsi render silhouette line chart
+    function renderSilhouetteChart(ks, scores) {
+        const canvas = document.getElementById('silhouetteChart');
+        if (!canvas) {
+            console.error("Canvas dengan id 'silhouetteChart' tidak ditemukan!");
+            return;
+        }
+
+        const ctxLine = canvas.getContext('2d');
+        const backgroundColorPlugin = {
+            id: 'custom_canvas_background_color',
+            beforeDraw: (chart) => {
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = '#f0f0f0'; 
+                ctx.fillRect(0, 0, chart.width, chart.height);
+                ctx.restore();
+            }
+        };
+
+        new Chart(ctxLine, {
+            type: 'line',
+            data: {
+                labels: ks,
+                datasets: [{
+                    label: 'Silhouette Score',
+                    data: scores,
+                    fill: false,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: false,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Silhouette Score vs. Number of Clusters',
+                        font: {
+                            size: 18,
+                            weight: 'bold'
+                        }
+                    },
+                    legend: {
+                        display: true
+                    }
                 },
-                // Ini yang diubah untuk background putih
-                backgroundColor: '#fff',
-                animation: {
-                    onComplete: function() {
-                        // Set background color after animation completes
-                        ctx.canvas.style.backgroundColor = '#fff';
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Clusters (k)',
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Silhouette Score',
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
                     }
                 }
-            }
+            },
+            plugins: [backgroundColorPlugin]
         });
-        
-        // Set background color immediately
-        ctx.canvas.style.backgroundColor = '#fff';
     }
 });

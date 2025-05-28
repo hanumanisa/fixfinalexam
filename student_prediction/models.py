@@ -120,6 +120,23 @@ class CourseInstructor(models.Model):
         db_table = 'course_instructor'
         managed = False
 
+class CourseRecommendationHistory(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    recommended_semester = models.IntegerField()
+    recommended_instructors = models.ManyToManyField(Instructor)
+    input_average_score = models.FloatField()
+    input_attendance = models.FloatField()
+    input_difficulty = models.CharField(max_length=10)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'course_recommendation_history'
+        managed = True
+
+    def _str_(self):
+        return f"{self.student} - {self.course} (Sem {self.recommended_semester})"
+
 class ModelInfo(models.Model):    
     model_name = models.CharField(max_length=255)
     model_encorlabel = models.CharField(max_length=255, default='LabelEncoder')
@@ -163,3 +180,19 @@ class ModelHanum(models.Model):
     
     def __str__(self):    
         return self.model_name  
+    
+class ModelInfoSaf(models.Model):
+    model_name = models.CharField(max_length=100)
+    model_file = models.CharField(max_length=255)
+    training_data = models.CharField(max_length=255)
+    training_date = models.DateTimeField(auto_now_add=True)
+    model_summary = models.TextField()
+    model_type = models.CharField(max_length=50, default='RandomForestClassifier')
+    target_variables = models.CharField(max_length=255, default='semester,dosen')
+
+    class Meta:
+        db_table = 'modelinfosaf'
+        managed = True
+
+    def _str_(self):
+        return f"{self.model_name} (trained: {self.training_date})"

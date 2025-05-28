@@ -103,6 +103,22 @@ def generate_recommendation(rule_data, course1, course2, course1_difficulty, cou
  
     if 'hard' in [d.lower() for d in course1_difficulty] and 'hard' in [d.lower() for d in course2_difficulty]:
         return f"{course1} dan {course2} Not Recommended to be taken together in the same semester as both have a high level of difficulty."
+    if 'hard' in [d.lower() for d in course1_difficulty] and 'medium' in [d.lower() for d in course2_difficulty]:
+        return f"{course1} dan {course2} Request further consideration to be taken together in the same semester."
+    if 'medium' in [d.lower() for d in course1_difficulty] and 'hard' in [d.lower() for d in course2_difficulty]:
+        return f"{course1} dan {course2} Request further consideration to be taken together in the same semester."
+    if 'hard' in [d.lower() for d in course1_difficulty] and 'easy' in [d.lower() for d in course2_difficulty]:
+        return f"{course1} dan {course2} Acceptable to be taken in the same semester." 
+    if 'easy' in [d.lower() for d in course1_difficulty] and 'hard' in [d.lower() for d in course2_difficulty]:
+        return f"{course1} dan {course2} Acceptable to be taken together in the same semester." 
+    if 'medium' in [d.lower() for d in course1_difficulty] and 'medium' in [d.lower() for d in course2_difficulty]:
+        return f"{course1} dan {course2} Moderately recommended to be taken together in the same semester."
+    if 'medium' in [d.lower() for d in course1_difficulty] and 'easy' in [d.lower() for d in course2_difficulty]:
+        return f"{course1} dan {course2} Recommended to be taken together in the same semester."
+    if 'easy' in [d.lower() for d in course1_difficulty] and 'medium' in [d.lower() for d in course2_difficulty]:
+        return f"{course1} dan {course2} Recommended to be taken together in the same semester."
+    if 'easy' in [d.lower() for d in course1_difficulty] and 'easy' in [d.lower() for d in course2_difficulty]:
+        return f"{course1} dan {course2} Highly recommended to be taken together in the same semester."
     
     if rule_data is None or rule_data.empty:
         return f"{course1} dan {course2} Does not have a significant relationship based on historical data."

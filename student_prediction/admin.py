@@ -13,6 +13,8 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report
 import joblib
 from django.urls import reverse
+from mlxtend.frequent_patterns import apriori, association_rules
+import os
 
 # Register your models here.
 @admin.register(ModelInfo)
@@ -109,6 +111,7 @@ class ModelInfoAdmin(admin.ModelAdmin):
 
 
 
+
 @admin.register(ModelHanum)
 class ModelHanumAdmin(admin.ModelAdmin):
     list_display = ('model_name', 'training_date', 'training_data', 'short_summary', 'retrain_button')
@@ -119,5 +122,63 @@ class ModelHanumAdmin(admin.ModelAdmin):
     short_summary.short_description = "Summary"
 
     def retrain_button(self, obj):
-        return format_html('<a class="button" href="/admin/retrain-model/{}">Retrain</a>', obj.id)
+        url = reverse('admin:student_prediction_modelhanum_retrain_model', args=[obj.pk])
+        return format_html('<a class="button" href="{}">Retrain</a>', url)
     retrain_button.short_description = 'Retrain'
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'retrain-model/<int:pk>/',
+                self.admin_site.admin_view(self.retrain_model_view),
+                name='student_prediction_modelhanum_retrain_model'
+            ),
+        ]
+        return custom_urls + urls
+
+    def retrain_model_view(self, request, pk):
+        model_info = get_object_or_404(ModelHanum, pk=pk)
+        try:
+            assessment_csv = 'course_example_new.csv'
+            output_csv = 'course_apriori_rules.csv'
+
+            if not os.path.exists(assessment_csv):
+                self.message_user(request, f"Dataset '{assessment_csv}' tidak ditemukan.", level=messages.ERROR)
+                return redirect(request.META.get('HTTP_REFERER', '/admin/'))
+
+            df = pd.read_csv(assessment_csv)
+
+            # Prepare basket matrix
+            basket = (df.groupby(['stu_id', 'course_name'])['assessment_id']
+                      .count().unstack().reset_index().fillna(0)
+                      .set_index('stu_id'))
+            basket = basket.applymap(lambda x: 1 if x >= 1 else 0)
+
+            # Apriori process
+            frequent_itemsets = apriori(basket, min_support=0.05, use_colnames=True)
+            rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.3)
+
+            # Save rules to CSV
+            rules.to_csv(output_csv, index=False)
+
+            # Save info to model instance
+            summary = f"Total Rules: {len(rules)}\nTop Rule:\n"
+            if not rules.empty:
+                top_rule = rules.iloc[0]
+                summary += f"Antecedents: {top_rule['antecedents']}, Consequents: {top_rule['consequents']}, Confidence: {top_rule['confidence']:.2f}, Lift: {top_rule['lift']:.2f}"
+            else:
+                summary += "No rules generated."
+
+            model_info.model_file = output_csv
+            model_info.training_data = assessment_csv
+            model_info.training_date = timezone.now()
+            model_info.model_summary = summary
+            model_info.save()
+
+            self.message_user(request, f'Model Apriori berhasil dilatih ulang dan diperbarui (ID: {model_info.id})', level=messages.SUCCESS)
+
+        except Exception as e:
+            self.message_user(request, f'Gagal melatih ulang model: {str(e)}', level=messages.ERROR)
+
+        return redirect(request.META.get('HTTP_REFERER', '/admin/'))

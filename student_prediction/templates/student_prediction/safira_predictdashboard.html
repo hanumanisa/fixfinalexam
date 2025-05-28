@@ -2,46 +2,43 @@
 
 {% block content %}
 <style>
-    body {
-        background-color: #fffde7; /* Kuning muda */
+    /* [Keep your existing styles] */
+    .result-card {
+        border-left: 5px solid #ffc107;
     }
-    .btn-primary {
-        background-color: #ffc107; /* Kuning lebih cerah */
-        border-color: #ffc107;
-        color: #000;
+    .instructor-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        transition: transform 0.3s;
     }
-    .btn-primary:hover {
-        background-color: #ffca28;
-        border-color: #ffca28;
+    .instructor-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .card {
-        border: 1px solid #ffc107;
-        box-shadow: 0 4px 8px rgba(255, 193, 7, 0.1);
+    .semester-badge {
+        font-size: 1.2rem;
+        padding: 10px 20px;
     }
-    .card-header {
-        background-color: #ffecb3; /* Kuning lebih muda */
-        border-bottom: 1px solid #ffc107;
+    .chart-container {
+        margin-top: 30px;
+        margin-bottom: 20px;
+        position: relative;
+        height: 300px;
+        width: 100%;
     }
-    .table thead th {
-        background-color: #ffecb3;
+    .performance-metrics {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
     }
-    .table-success {
-        background-color: #fff8e1 !important;
-    }
-    .alert-success {
-        background-color: #f0f4c3; /* Hijau muda kekuningan */
-        border-color: #dce775;
-        color: #000;
-    }
-    .alert-danger {
-        background-color: #ffcdd2; /* Merah muda */
-        border-color: #ef9a9a;
-        color: #000;
+    .metric-item {
+        margin-bottom: 10px;
     }
 </style>
 
 <div class="container mt-5">
-    <h2 style="color: #5d4037;">Semester Recommendations for Courses System</h2>
+    <h2 style="color: #5d4037;">Semester Recommendation</h2>
     
     <form method="post" class="mt-4">
         {% csrf_token %}
@@ -49,16 +46,21 @@
             <div class="col-md-6">
                 <div class="form-group">
                     {{ form.course.label_tag }}
-                    <br>{% if form.course.errors %}
-                        <div class="alert alert-danger">{{ form.course.errors }}</div>
-                    {% endif %}
                     {{ form.course }}
+                </div>
+                <div class="form-group">
+                    {{ form.average_score.label_tag }}
+                    {{ form.average_score }}
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    {{ form.next_academic_year.label_tag }}
-                    {{ form.next_academic_year }}
+                    {{ form.attendance_percentage.label_tag }}
+                    {{ form.attendance_percentage }}
+                </div>
+                <div class="form-group">
+                    {{ form.difficulty_level.label_tag }}
+                    {{ form.difficulty_level }}
                 </div>
             </div>
         </div>
@@ -70,39 +72,168 @@
     {% endif %}
 
     {% if result %}
-        <div class="card mt-4">
+        <div class="card mt-4 result-card">
             <div class="card-header">
-                <h4 style="color: #5d4037;">Recommendation Result</h4>
+                <h4 style="color: #c39d92;">Result</h4>
             </div>
             <div class="card-body">
-                <h5 style="color: #5d4037;">For {{ result.course.course_name }}</h5>
-                <p>Academic Year: {{ result.next_year }}</p>
+                <h5 style="color: #5d4037;">Course: {{ result.course.course_name }}</h5>
                 
                 <div class="alert alert-success mt-3">
-                    <strong>Recommended Semester:</strong> {{ result.best_semester.semester_name }}
-                    <br>
-                    <strong>Predicted Average Grade:</strong> {{ result.predicted_grade }}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Semester Recommendation:</strong>
+                            <span class="badge bg-warning text-dark semester-badge ml-2">
+                                Semester {{ result.predicted_semester }}
+                            </span>
+                        </div>
+                        <div>
+                            <strong>Input Data:</strong>
+                            Score: {{ result.input_data.average_score }} | 
+                            Attendance: {{ result.input_data.attendance }}% | 
+                            Difficulty: {{ result.input_data.difficulty }}
+                        </div>
+                    </div>
                 </div>
                 
-                <h5 class="mt-4" style="color: #5d4037;">All Semester Predictions:</h5>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Semester</th>
-                            <th>Predicted Grade</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for pred in result.all_predictions %}
-                        <tr {% if pred.semester == result.best_semester %}class="table-success"{% endif %}>
-                            <td>{{ pred.semester.semester_name }}</td>
-                            <td>{{ pred.predicted_grade }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <h5 class="mt-4" style="color: #5d4037;">Instructor Recommendation:</h5>
+                <div class="row">
+                    {% for instructor in result.recommended_instructors %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card instructor-card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ instructor.instructor_name }}</h5>
+                                <p class="card-text">
+                                    <i class="fas fa-chalkboard-teacher"></i> {{ result.course.course_name }} Instructor
+                                </p>
+                                
+                                <div class="performance-metrics">
+                                    <div class="metric-item">
+                                        <strong>Average Score:</strong> {{ instructor.avg_score|floatformat:1 }}
+                                    </div>
+                                    <div class="metric-item">
+                                        <strong>Average Attendance:</strong> {{ instructor.avg_attendance|floatformat:1 }}%
+                                    </div>
+                                    <div class="metric-item">
+                                        <strong>Pass Rate:</strong> {{ instructor.pass_rate|floatformat:1 }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Chart Visualization Section -->
+                <div class="mt-4">
+                    <h5 style="color: #5d4037;">Instructor Performance Comparison</h5>
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     {% endif %}
 </div>
+
+<!-- Load Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if result %}
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    
+    // Prepare data for chart
+    const instructors = [
+        {% for instructor in result.recommended_instructors %}
+        "{{ instructor.instructor_name }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const avgScores = [
+        {% for instructor in result.recommended_instructors %}
+        {{ instructor.avg_score|floatformat:1 }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const avgAttendances = [
+        {% for instructor in result.recommended_instructors %}
+        {{ instructor.avg_attendance|floatformat:1 }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const passRates = [
+        {% for instructor in result.recommended_instructors %}
+        {{ instructor.pass_rate|floatformat:1 }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: instructors,
+            datasets: [
+                {
+                    label: 'Average Score',
+                    data: avgScores,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Average Attendance (%)',
+                    data: avgAttendances,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Pass Rate (%)',
+                    data: passRates,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage/Score'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Instructors'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Instructor Performance Metrics'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.raw + (context.dataset.label !== 'Average Score' ? '%' : '');
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
 {% endblock %}

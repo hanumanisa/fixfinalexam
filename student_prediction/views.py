@@ -524,6 +524,21 @@ def create_visualization(rule_data, course1, course2):
 
 #SAFIRA
 
+from django.shortcuts import render
+from django.db import models, connection, reset_queries
+from django.conf import settings
+from .forms import CourseRecommendationForm
+from .models import (
+    Course, CourseDifficulty, Enrollment,
+    Attendance, Assessment, Instructor,
+    CourseInstructor, ModelInfoSaf, Semester
+)
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+import joblib
+import os
+
 def safira_predictdashboard(request):
     # Initialize fresh connection
     reset_queries()
@@ -534,141 +549,73 @@ def safira_predictdashboard(request):
         form = CourseRecommendationForm(request.POST)
         if form.is_valid():
             try:
+                # Get form data
                 course = form.cleaned_data['course']
-                next_year = form.cleaned_data['next_academic_year']
+                avg_score = form.cleaned_data['average_score']
+                attendance = form.cleaned_data['attendance_percentage']
+                difficulty = form.cleaned_data['difficulty_level']
                 
-                # Get course difficulty
-                try:
-                    course_diff = CourseDifficulty.objects.get(course=course)
-                    difficulty_level = course_diff.difficulty_level
-                except CourseDifficulty.DoesNotExist:
-                    return render(request, 'student_prediction/safira_predictdashboard.html', {
-                        'form': CourseRecommendationForm(),
-                        'error': 'Course difficulty data not available'
-                    })
-
-                # Get enrollments with attendance data
-                enrollments = Enrollment.objects.filter(course=course, grade__isnull=False)\
-                    .select_related('semester', 'course__department')\
-                    .prefetch_related('attendance_set')
-
-                if not enrollments.exists():
-                    return render(request, 'student_prediction/safira_predictdashboard.html', {
-                        'form': CourseRecommendationForm(),
-                        'error': 'No valid enrollment data with attendance available'
-                    })
+                # Prepare features for prediction
+                features = {
+                    'course_id': course.course_id,
+                    'average_score': avg_score,
+                    'attendance_percentage': attendance,
+                    'difficulty_level': difficulty
+                }
                 
-                # Prepare data
-                data = []
+                # Convert to DataFrame
+                df = pd.DataFrame([features])
+                
+                # Encode categorical features
                 le = LabelEncoder()
+                df['difficulty_encoded'] = le.fit_transform(df['difficulty_level'])
                 
-                for enroll in enrollments:
-                    # Get first attendance record
-                    attendance = enroll.attendance_set.first()
-                    if attendance:
-                        data.append({
-                            'course_id': course.course_id,
-                            'semester_id': enroll.semester.semester_id,
-                            'grade': float(enroll.grade),
-                            'attendance': float(attendance.attendance_percentage),
-                            'difficulty': difficulty_level
-                        })
+                # Load or train model
+                model_path = os.path.join(settings.MEDIA_ROOT, 'ml_models', 'course_recommendation_model.pkl')
                 
-                if len(data) < 3:
-                    return render(request, 'student_prediction/safira_predictdashboard.html', {
-                        'form': CourseRecommendationForm(),
-                        'error': 'Need at least 3 records for prediction'
-                    })
-                
-                # Process data
-                try:
-                    df = pd.DataFrame(data)
-                    df['difficulty_encoded'] = le.fit_transform(df['difficulty'])
-                    
-                    # Calculate averages
-                    course_semester_avg = df.groupby(['course_id', 'semester_id']).agg({
-                        'grade': 'mean',
-                        'attendance': 'mean',
-                        'difficulty_encoded': 'first'
-                    }).reset_index()
-                    
-                    student_count = df.groupby(['course_id', 'semester_id']).size().reset_index(name='student_count')
-                    course_semester_avg = course_semester_avg.merge(student_count, on=['course_id', 'semester_id'])
-                except Exception as e:
-                    return render(request, 'student_prediction/safira_predictdashboard.html', {
-                        'form': CourseRecommendationForm(),
-                        'error': f'Data processing failed: {str(e)}'
-                    })
-                
-                # Train model
-                try:
-                    X = course_semester_avg[['course_id', 'semester_id', 'difficulty_encoded', 'student_count']]
-                    y = course_semester_avg['grade']
-                    
-                    model = RandomForestRegressor(
-                        n_estimators=100,
-                        random_state=42,
-                        max_depth=5,
-                        min_samples_split=3
-                    )
-                    model.fit(X, y)
-                except Exception as e:
-                    return render(request, 'student_prediction/safira_predictdashboard.html', {
-                        'form': CourseRecommendationForm(),
-                        'error': f'Model training failed: {str(e)}'
-                    })
+                if os.path.exists(model_path):
+                    # Load existing model
+                    model = joblib.load(model_path)
+                else:
+                    # Train new model with actual data from database
+                    model = train_model_from_database()
                 
                 # Make predictions
-                predictions = []
-                semesters = Semester.objects.all().only('semester_id', 'semester_name')
+                X = df[['course_id', 'average_score', 'attendance_percentage', 'difficulty_encoded']]
                 
-                for semester in semesters:
-                    try:
-                        features = np.array([[
-                            course.course_id,
-                            semester.semester_id,
-                            le.transform([difficulty_level])[0],
-                            course_semester_avg['student_count'].mean()
-                        ]])
-                        
-                        pred_grade = model.predict(features)[0]
-                        predictions.append({
-                            'semester': semester,
-                            'predicted_grade': round(float(pred_grade), 1)
-                        })
-                    except Exception as e:
-                        continue
+                # Predict semester (1-8)
+                semester_pred = model.predict(X)[0]
                 
-                if not predictions:
-                    return render(request, 'student_prediction/safira_predictdashboard.html', {
-                        'form': CourseRecommendationForm(),
-                        'error': 'Failed to generate predictions'
+                # Get top 2 instructors with performance metrics
+                instructors = get_recommended_instructors(course)
+                
+                # Prepare instructor data for chart
+                instructor_data = []
+                for instructor in instructors:
+                    instructor_data.append({
+                        'instructor_name': instructor.instructor_name,
+                        'avg_score': instructor.avg_score,
+                        'avg_attendance': instructor.avg_attendance,
+                        'pass_rate': instructor.pass_rate
                     })
                 
-                # Get best semester
-                best_semester = max(predictions, key=lambda x: x['predicted_grade'])
-                
-                # Create model directory if not exists
-                model_dir = os.path.join(settings.MEDIA_ROOT, 'ml_models')
-                os.makedirs(model_dir, exist_ok=True)
-                
-                # Save model and create ModelInfo
                 return render(request, 'student_prediction/safira_predictdashboard.html', {
-                    'form': CourseRecommendationForm(),
+                    'form': form,
                     'result': {
                         'course': course,
-                        'next_year': next_year,
-                        'best_semester': best_semester['semester'],
-                        'predicted_grade': best_semester['predicted_grade'],
-                        'all_predictions': sorted(predictions, key=lambda x: x['predicted_grade'], reverse=True),
-                        'model_saved': True if 'model_info' in locals() else False
+                        'predicted_semester': semester_pred,
+                        'recommended_instructors': instructor_data,
+                        'input_data': {
+                            'average_score': avg_score,
+                            'attendance': attendance,
+                            'difficulty': difficulty
+                        }
                     }
                 })
-            
+                
             except Exception as e:
-                connection.close()
                 return render(request, 'student_prediction/safira_predictdashboard.html', {
-                    'form': CourseRecommendationForm(),
+                    'form': form,
                     'error': f'System error: {str(e)}'
                 })
     
@@ -677,4 +624,140 @@ def safira_predictdashboard(request):
     return render(request, 'student_prediction/safira_predictdashboard.html', {
         'form': form,
         'error': None
-    }) 
+    })
+
+def train_model_from_database():
+    """Train model using actual data from database tables"""
+    # Get enrollment data with related information
+    enrollments = Enrollment.objects.select_related(
+        'course', 'semester', 'student'
+    ).prefetch_related(
+        'attendance_set', 'assessment_set'
+    ).all()
+    
+    data = []
+    
+    for enroll in enrollments:
+        # Get average attendance for this enrollment
+        attendance = enroll.attendance_set.first()
+        attendance_pct = attendance.attendance_percentage if attendance else 0
+        
+        # Get average assessment score
+        assessments = enroll.assessment_set.all()
+        avg_score = assessments.aggregate(avg_score=models.Avg('score'))['avg_score'] or 0
+        
+        # Get course difficulty
+        try:
+            difficulty = CourseDifficulty.objects.get(course=enroll.course).difficulty_level
+        except CourseDifficulty.DoesNotExist:
+            difficulty = 'Medium'
+        
+        data.append({
+            'course_id': enroll.course.course_id,
+            'average_score': avg_score,
+            'attendance_percentage': attendance_pct,
+            'difficulty_level': difficulty,
+            'semester': enroll.semester.semester_id  # Use actual semester ID
+        })
+    
+    # Create DataFrame
+    df = pd.DataFrame(data)
+    
+    # Encode difficulty
+    le = LabelEncoder()
+    df['difficulty_encoded'] = le.fit_transform(df['difficulty_level'])
+    
+    # Prepare features and target
+    X = df[['course_id', 'average_score', 'attendance_percentage', 'difficulty_encoded']]
+    y = df['semester']
+    
+    # Train model
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,
+        max_depth=5
+    )
+    model.fit(X, y)
+    
+    # Save model
+    model_dir = os.path.join(settings.MEDIA_ROOT, 'ml_models')
+    os.makedirs(model_dir, exist_ok=True)
+    model_path = os.path.join(model_dir, 'course_recommendation_model.pkl')
+    joblib.dump(model, model_path)
+    
+    # Create model info record
+    model_info = ModelInfoSaf.objects.create(
+        model_name='Course Recommendation Model',
+        model_file=model_path,
+        training_data='Database Records',
+        model_summary=str(model.get_params()),
+        model_type='RandomForestClassifier',
+        target_variables='semester,instructors'
+    )
+    
+    return model
+
+def get_recommended_instructors(course):
+    """Get top 2 instructors with performance metrics using safe queries"""
+    from django.db.models import Avg
+    
+    instructor_performance = []
+    
+    # Get all semesters this course was taught
+    course_semesters = CourseInstructor.objects.filter(
+        course=course
+    ).values_list('semester', flat=True).distinct()
+    
+    for semester_id in course_semesters:
+        try:
+            # Get instructor for this course+semester
+            ci = CourseInstructor.objects.get(
+                course=course,
+                semester_id=semester_id
+            )
+            instructor = ci.instructor
+            
+            # Get all enrollments for this course+semester
+            enrollments = Enrollment.objects.filter(
+                course=course,
+                semester_id=semester_id
+            )
+            
+            # Calculate metrics
+            avg_score = Assessment.objects.filter(
+                enrollment__in=enrollments
+            ).aggregate(avg=Avg('score'))['avg'] or 0
+            
+            avg_attendance = Attendance.objects.filter(
+                enroll__in=enrollments
+            ).aggregate(avg=Avg('attendance_percentage'))['avg'] or 0
+            
+            pass_count = enrollments.filter(grade__gte=60).count()
+            pass_rate = (pass_count / enrollments.count() * 100) if enrollments.count() > 0 else 0
+            
+            instructor_performance.append({
+                'instructor': instructor,
+                'avg_score': round(avg_score, 1),
+                'avg_attendance': round(avg_attendance, 1),
+                'pass_rate': round(pass_rate, 1),
+                'semester': semester_id
+            })
+            
+        except CourseInstructor.DoesNotExist:
+            continue
+    
+    # Sort by performance (score > attendance > pass rate)
+    instructor_performance.sort(
+        key=lambda x: (-x['avg_score'], -x['avg_attendance'], -x['pass_rate'])
+    )
+    
+    # Prepare final result with only needed fields
+    result = []
+    for item in instructor_performance[:2]:  # Top 2
+        instructor = item['instructor']
+        instructor.avg_score = item['avg_score']
+        instructor.avg_attendance = item['avg_attendance']
+        instructor.pass_rate = item['pass_rate']
+        result.append(instructor)
+    
+    return result

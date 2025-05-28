@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ModelInfo, alfira_ModelInfo, ModelHanum
+from .models import ModelInfo, alfira_ModelInfo, ModelHanum, ModelInfoSaf
 from django.utils.html import format_html
 from django.utils.timezone import now
 from django.urls import path
@@ -121,3 +121,18 @@ class ModelHanumAdmin(admin.ModelAdmin):
     def retrain_button(self, obj):
         return format_html('<a class="button" href="/admin/retrain-model/{}">Retrain</a>', obj.id)
     retrain_button.short_description = 'Retrain'
+
+@admin.register(ModelInfoSaf)
+class ModelInfoSafAdmin(admin.ModelAdmin):
+    list_display = ('model_name', 'model_type', 'training_date')
+    search_fields = ('model_name', 'model_type')
+    list_filter = ('training_date', 'model_type')
+    readonly_fields = ('training_date',)
+
+class CourseRecommendationHistoryAdmin(admin.ModelAdmin):
+    list_display = ('student', 'course', 'recommended_semester', 'created_at')
+    list_filter = ('recommended_semester', 'course__department')
+    filter_horizontal = ('recommended_instructors',)
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('student', 'course')

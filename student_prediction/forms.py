@@ -39,20 +39,36 @@ class InstructorPerformanceForm(forms.Form):
     )
 
 class CourseRecommendationForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['course'].queryset = Course.objects.all().select_related('department')
-    
+    COURSE_DIFFICULTY_CHOICES = [
+        ('Easy', 'Easy'),
+        ('Medium', 'Medium'),
+        ('Hard', 'Hard'),
+    ]
+
     course = forms.ModelChoiceField(
-        queryset=Course.objects.none(),
-        label="Select Course",
-        empty_label="-- Select Course --"
+        queryset=Course.objects.all(),
+        label="Course",
+        empty_label="-- Choose Course --",
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
-    
-    next_academic_year = forms.CharField(
-        label="Next Academic Year",
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'e.g. 2025/2026'
-        })
+    average_score = forms.FloatField(
+        label="Average Score",
+        min_value=0,
+        max_value=100,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
     )
+    attendance_percentage = forms.FloatField(
+        label="Attendance Percentage",
+        min_value=0,
+        max_value=100,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    difficulty_level = forms.ChoiceField(
+        choices=COURSE_DIFFICULTY_CHOICES,
+        label="Difficulty",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def _init_(self, *args, **kwargs):
+        super()._init_(*args, **kwargs)
+        self.fields['course'].queryset = Course.objects.all()
